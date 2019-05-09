@@ -1,2 +1,6 @@
 .vs_code/
+.code-workspace
 __pycache__/
+trained_models/
+games/
+data/

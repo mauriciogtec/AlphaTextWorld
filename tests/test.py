@@ -11,11 +11,16 @@ with open('../TextWorld/montecarlo/vocab.txt', 'r') as fn:
 
 embeddings, vocab = textutils.load_embeddings(
     embeddingsdir="../../glove.6B/",
-    embedding_dim=300,
+    embedding_dim=100,
     vocab=textworld_vocab)
 
 model = neuralnetwork.AlphaTextWorldNet(embeddings, vocab)
+value, policy = model("you are in the kitchen", ["go west", "open fridge"])
 
-model.add_to_memory("start of game")
+model.memory.append("start of game")
+model.memory.append("you need food")
 
-obsx, cmdlistx = model("you need food", ["go west", "open fridge"])
+value, policy = model("you are in the kitchen", ["go west", "open fridge", "I am starving"])
+
+model.summary()
+model.save_weights("trained_models/init.h5")

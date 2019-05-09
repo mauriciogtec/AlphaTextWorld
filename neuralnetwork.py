@@ -44,13 +44,13 @@ class BahdanauAttention(layers.Layer):
     """
     def __init__(self, units, l2=None, **kwargs):
         super(BahdanauAttention, self).__init__(**kwargs)
-        self.W1 = tf.keras.layers.Dense(
+        self.W1 = layers.Dense(
             units=units,
             kernel_regularizer=regularizers.l2(l2))
-        self.W2 = tf.keras.layers.Dense(
+        self.W2 = layers.Dense(
             units=units,
             kernel_regularizer=regularizers.l2(l2))
-        self.V = tf.keras.layers.Dense(
+        self.V = layers.Dense(
             units=1,
             kernel_regularizer=regularizers.l2(l2))
 
@@ -101,6 +101,29 @@ class StateEncoder(layers.Layer):
         x, _ = self.attention(query, x)
         return x
 
+class DenseHead(layers.Layer):
+    """Trained to predict a singlue value"""
+    def __init__(self, units, dropout=0.5, l2=None, **kwargs):
+        super(DenseHead, self).__init__(**kwargs)
+        self.dense_1 = layers.Dense(
+            units=units,
+            kernel_regularizer=regularizers.l2(l2),
+            name="dense_1",
+            activation='relu')
+        self.dropout = layers.Dropout(dropout)
+        self.dense_2 = layers.Dense(
+            units=1,
+            kernel_regularizer=regularizers.l2(l2),
+            name="dense_2")
+    
+    def call(self, inputs, training=None):
+        x = inputs
+        x = self.dense_1(x)
+        if training:
+            x = self.dropout(x)
+        x = self.dense_2(x)
+        return x
+
 
 class AlphaTextWorldNet(models.Model):
     """
@@ -110,11 +133,11 @@ class AlphaTextWorldNet(models.Model):
 
     def __init__(self,  embeddings, vocab, **kwargs):
         super(AlphaTextWorldNet, self).__init__(**kwargs)
-
+        
         self.memory = []
-
         self.word2id = {w: i for i, w in enumerate(vocab)}
         self.id2word = {i: w for i, w in self.word2id.items()}
+        
         embedding_dim, vocab_size = embeddings.shape
         self.embeddings = layers.Embedding(
             input_dim=vocab_size,
@@ -143,31 +166,57 @@ class AlphaTextWorldNet(models.Model):
             l2=self.REG_PENALTY,
             name="memory_attention")
 
-    def flush_memory(self):
-        self.memory = []
-
-    def add_to_memory(self, value):
-        self.memory.append(value)
-
-    def encode_text(self, textlist, encoder="obs"):
+        self.value_head = DenseHead(
+            units=128,
+            dropout=0.5,
+            l2=self.REG_PENALTY,
+            name="value_head")
+        
+        self.policy_head = DenseHead(
+            units=128,
+            dropout=0.5,
+            l2=self.REG_PENALTY,
+            name="policy_head")
+    
+    def encode_text(self, textlist, encoder="obs", training=None):
         """common pattern: embed -> encode"""
         assert encoder in ["obs", "cmd"]
         x = textutils.text2tensor(textlist, self.word2id)
         x = self.embeddings(x)
-        x = self.obs_encoder(x) if encoder == "obs" else self.cmd_encoder(x)
+        if encoder == "obs":
+            x = self.obs_encoder(x, training=training)
+        else:
+            x = self.cmd_encoder(x, training=training)
         return x
 
-    def call(self, obs, cmdlist, training=None):
-        obsx = self.encode_text([obs], encoder="obs")
-        cmdlistx = self.encode_text(cmdlist, encoder="cmd")
-
+    def call(self, obs, cmdlist, recall=True, training=None):
+        # fully process observation with attention
+        obsx = self.encode_text([obs], encoder="obs", training=training)
         if len(self.memory) > 0:
-            # this part should be precomputed for game play
-            memoryx = self.encode_text(self.memory, encoder="cmd")
-            # (1 x mem_size x hidden_size)
-            memoryx = tf.expand_dims(memoryx, axis=0)
-            pdb.set_trace()
-            contextx, _ = self.memory_attention(obsx, memoryx)
-            obs += contextx
+            memoryx = self.encode_text(self.memory, encoder="obs", training=training)
+            memoryx = tf.expand_dims(memoryx, axis=0)  # (1 x mem_size x hidden_size)
+            obsxplus, _ = self.memory_attention(obsx, memoryx)
+            obsx += obsxplus
+        else:
+            memoryx = tf.zeros((1, 1, obsx.shape[1]))
 
-        return obsx, cmdlistx
+        # fully process command with attention
+        cmdlistx = self.encode_text(cmdlist, encoder="cmd", training=training)
+        memoryx = tf.concat([memoryx, tf.expand_dims(obsx, axis=0)], axis=1)
+        memoryx = tf.stack([tf.squeeze(memoryx, axis=0)] * len(cmdlist), axis=0)
+        cmdlistxplus, _ = self.memory_attention(cmdlistx, memoryx)
+        cmdlistx += cmdlistxplus # cmd_size x hidden
+
+        # value heead from obs memory only
+        value = self.value_head(obsx)
+        value = tf.squeeze(value)
+        
+        # policy head from obs memory and commands
+        x = tf.stack([tf.squeeze(obsx, axis=0)] * len(cmdlist), axis=0)
+        x = tf.concat([x, cmdlistx], axis=1)  # (cmd_size x (hidden_obs + hidden_cmds))
+        policy_logits = self.policy_head(x)  # cmd_size x 1
+        policy = tf.math.softmax(policy_logits, axis=0) # cmd_size x 1
+        policy = tf.squeeze(policy, axis=1)
+
+        return value, policy
+
