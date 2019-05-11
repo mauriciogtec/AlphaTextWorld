@@ -101,6 +101,7 @@ class StateEncoder(layers.Layer):
         x, _ = self.attention(query, x)
         return x
 
+
 class DenseHead(layers.Layer):
     """Trained to predict a singlue value"""
     def __init__(self, units, dropout=0.5, l2=None, **kwargs):
@@ -115,7 +116,7 @@ class DenseHead(layers.Layer):
             units=1,
             kernel_regularizer=regularizers.l2(l2),
             name="dense_2")
-    
+
     def call(self, inputs, training=None):
         x = inputs
         x = self.dense_1(x)
@@ -133,11 +134,10 @@ class AlphaTextWorldNet(models.Model):
 
     def __init__(self,  embeddings, vocab, **kwargs):
         super(AlphaTextWorldNet, self).__init__(**kwargs)
-        
-        self.memory = []
+
         self.word2id = {w: i for i, w in enumerate(vocab)}
         self.id2word = {i: w for i, w in self.word2id.items()}
-        
+
         embedding_dim, vocab_size = embeddings.shape
         self.embeddings = layers.Embedding(
             input_dim=vocab_size,
@@ -161,23 +161,35 @@ class AlphaTextWorldNet(models.Model):
             l2=self.REG_PENALTY,
             name="cmd_encoder")
 
-        self.memory_attention = BahdanauAttention(
+        self.obs_memory_attention = BahdanauAttention(
             units=embedding_dim,
             l2=self.REG_PENALTY,
-            name="memory_attention")
+            name="obs_memory_attention")
+
+        self.cmd_memory_attention = BahdanauAttention(
+            units=embedding_dim,
+            l2=self.REG_PENALTY,
+            name="cmd_memory_attention")
 
         self.value_head = DenseHead(
             units=128,
             dropout=0.5,
             l2=self.REG_PENALTY,
             name="value_head")
-        
+
         self.policy_head = DenseHead(
             units=128,
             dropout=0.5,
             l2=self.REG_PENALTY,
             name="policy_head")
-    
+
+        # this properties are related to memory mode
+        # memory = []
+        # tensor_memory = False
+
+    def flush_memory(self):
+        memory = []
+
     def encode_text(self, textlist, encoder="obs", training=None):
         """common pattern: embed -> encode"""
         assert encoder in ["obs", "cmd"]
@@ -189,34 +201,68 @@ class AlphaTextWorldNet(models.Model):
             x = self.cmd_encoder(x, training=training)
         return x
 
-    def call(self, obs, cmdlist, recall=True, training=None):
-        # fully process observation with attention
-        obsx = self.encode_text([obs], encoder="obs", training=training)
-        if len(self.memory) > 0:
-            memoryx = self.encode_text(self.memory, encoder="obs", training=training)
-            memoryx = tf.expand_dims(memoryx, axis=0)  # (1 x mem_size x hidden_size)
-            obsxplus, _ = self.memory_attention(obsx, memoryx)
-            obsx += obsxplus
+    def call(self, obs, cmdlist,
+             memory=[],
+             training=None,
+             tensor_memory=False,
+             return_obs_tensor=False):
+        # process observation with interal attention
+        obstensor = self.encode_text([obs], encoder="obs", training=training)
+        obsx = obstensor
+
+        if len(memory) > 0:
+            # query memory
+            if tensor_memory:
+                memoryx = tf.stack(memory, axis=0)
+                memoryx = tf.expand_dims(memoryx, axis=0) # (1 x mem x hidden)
+            else:
+                memoryx = self.encode_text(
+                    memory,
+                    encoder="obs",
+                    training=training)
+                memoryx = tf.expand_dims(memoryx, axis=0)  # (1 x mem x hidden)
+
+            # add context to obs
+            obsmemx, _ = self.obs_memory_attention(obsx, memoryx)
         else:
-            memoryx = tf.zeros((1, 1, obsx.shape[1]))
+            obsmemx = tf.zeros_like(obsx)
 
-        # fully process command with attention
-        cmdlistx = self.encode_text(cmdlist, encoder="cmd", training=training)
-        memoryx = tf.concat([memoryx, tf.expand_dims(obsx, axis=0)], axis=1)
-        memoryx = tf.stack([tf.squeeze(memoryx, axis=0)] * len(cmdlist), axis=0)
-        cmdlistxplus, _ = self.memory_attention(cmdlistx, memoryx)
-        cmdlistx += cmdlistxplus # cmd_size x hidden
+        # fully process command with intenral attention
+        cmdx = self.encode_text(cmdlist, encoder="cmd", training=training)
 
-        # value heead from obs memory only
-        value = self.value_head(obsx)
+        if len(memory) > 0:
+            # query cmd memory residual
+            memoryx = tf.squeeze(memoryx, axis=0)
+            memoryx = tf.stack([memoryx] * len(cmdlist), axis=0)
+            # add memory residual
+            obscmdx = tf.stack([tf.squeeze(obsx, 0)] * len(cmdlist), 0)
+            obscmdx = tf.concat([obscmdx, cmdx], 1)  # (cmds x sum(hidden)))
+            cmdmemx, _ = self.cmd_memory_attention(obscmdx, memoryx)
+        else:
+            cmdmemx = tf.zeros_like(cmdx)
+
+        # value head from obs memory only
+        obsx = tf.concat([obsx, obsmemx], axis=1)
+        value = self.value_head(obsx, training=training)
         value = tf.squeeze(value)
-        
+
         # policy head from obs memory and commands
-        x = tf.stack([tf.squeeze(obsx, axis=0)] * len(cmdlist), axis=0)
-        x = tf.concat([x, cmdlistx], axis=1)  # (cmd_size x (hidden_obs + hidden_cmds))
-        policy_logits = self.policy_head(x)  # cmd_size x 1
-        policy = tf.math.softmax(policy_logits, axis=0) # cmd_size x 1
+        cmdjointx = tf.concat([cmdx, cmdmemx], axis=1)
+        x = tf.stack([tf.squeeze(obsx, axis=0)]*len(cmdlist), axis=0)
+        cmdjointx = tf.concat([x, cmdjointx], axis=1)
+        policy = self.policy_head(cmdjointx, training=training)  # (cmds x 1)
+        policy = tf.math.softmax(policy, axis=0)  # cmds x 1
         policy = tf.squeeze(policy, axis=1)
 
-        return value, policy
+        if return_obs_tensor:
+            return value, policy, tf.squeeze(obstensor)
+        else:
+            return value, policy
 
+
+def load_network(embeddings, vocab, path_to_weights):
+    model = AlphaTextWorldNet(embeddings, vocab)
+    initrun = model(".", [".", ".."], memory=["."], training=True)
+    model.load_weights(path_to_weights)
+    model.flush_memory()
+    return model
