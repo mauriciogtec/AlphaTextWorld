@@ -2,5 +2,5 @@
 .code-workspace
 __pycache__/
 trained_models/
-games/
+*games*/
 data/

@@ -130,7 +130,7 @@ class AlphaTextWorldNet(models.Model):
     """
     Learn to play from memory
     """
-    REG_PENALTY = 1e-3
+    REG_PENALTY = 1e-4
 
     def __init__(self,  embeddings, vocab, **kwargs):
         super(AlphaTextWorldNet, self).__init__(**kwargs)
@@ -183,13 +183,6 @@ class AlphaTextWorldNet(models.Model):
             l2=self.REG_PENALTY,
             name="policy_head")
 
-        # this properties are related to memory mode
-        # memory = []
-        # tensor_memory = False
-
-    def flush_memory(self):
-        memory = []
-
     def encode_text(self, textlist, encoder="obs", training=None):
         """common pattern: embed -> encode"""
         assert encoder in ["obs", "cmd"]
@@ -214,7 +207,7 @@ class AlphaTextWorldNet(models.Model):
             # query memory
             if tensor_memory:
                 memoryx = tf.stack(memory, axis=0)
-                memoryx = tf.expand_dims(memoryx, axis=0) # (1 x mem x hidden)
+                memoryx = tf.expand_dims(memoryx, axis=0)  # (1 x mem x hidden)
             else:
                 memoryx = self.encode_text(
                     memory,
@@ -264,5 +257,4 @@ def load_network(embeddings, vocab, path_to_weights):
     model = AlphaTextWorldNet(embeddings, vocab)
     initrun = model(".", [".", ".."], memory=["."], training=True)
     model.load_weights(path_to_weights)
-    model.flush_memory()
     return model

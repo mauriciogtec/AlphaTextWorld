@@ -198,8 +198,8 @@ class MCTSAgent:
         """Select using PUCT or node count, expand for new nodes"""
         node = self.current
         N = sum(e.visits for e in node.edges)  # TODO: possible bug here ????
-        ucb = [e.value + self.cpuct * e.prior * np.sqrt(N) / (1 + e.visits)
-               for e in node.edges]
+        eps = self.cpuct * len(node.edges) * np.sqrt(N)
+        ucb = [e.value + eps * e.prior / (1 + e.visits) for e in node.edges]
         if from_search:  # ucb is not used, only counts
             tau = 0.01 + (1.0 / self.temperature) *\
                 (1.0 - self.current.level() / self.max_steps)
@@ -259,7 +259,11 @@ class MCTSAgent:
                    if cmd not in ['inventory', 'look']]
         return cmdlist
 
-    def play_episode(self, subtrees: int=1, verbose: bool = False) -> Tuple:
+    def play_episode(self,
+                     subtrees: int = 1,
+                     max_subtree_depth: int = 8,
+                     verbose: bool = False) -> Tuple:
+
         """play a game"""
         env, obs, infos = self.reset()
         if verbose:
@@ -275,26 +279,28 @@ class MCTSAgent:
             # search until find a leaf or ending the game
             # subtree_memory = self.network.memory
 
+            subtree_root = self.current
+
             if self.current.isleaf():
                 cmdlist = self.avail_cmds(infos)
                 self.expand(cmdlist)
 
-            subtree_root = self.current
-
             for st in range(subtrees):
+                subtree_depth = 0
                 num_subtree_steps = num_steps
-                while not done and not self.current.isleaf():
+                while not done and subtree_depth < max_subtree_depth:
+                    if self.current.isleaf():
+                        cmdlist = self.avail_cmds(infos)
+                        self.expand(cmdlist)
                     index, cmd = self.select_move()
                     obs, score, done, infos = self.step(index, cmd)
                     self.current.score = score / self.max_score
+                    subtree_depth += 1
                     num_subtree_steps += 1
 
                 # backup final return if done, expand if leaf
                 if done:
                     self.backup_final_ret(infos, num_subtree_steps)
-                else:
-                    cmdlist = self.avail_cmds(infos)
-                    self.expand(cmdlist)
 
                 # restore root
                 obs, score, done, infos =\
@@ -313,7 +319,7 @@ class MCTSAgent:
         final_ret = self.backup_final_ret(infos, num_steps)
         reward = score + final_ret
 
-        return score, num_steps, infos, reward
+        return score, num_steps - 1, infos, reward
 
     def dump_tree(self) -> Dict:
         """simple tree traversal for dumping data"""
