@@ -23,10 +23,13 @@ class Edge:
         self.node = node
         self.value = np.random.normal(scale=1e-3)  # helps at expansion
         self.visits = 0
+        self.search_outcome = 0
 
     def __repr__(self):
-        return "Edge(visits={}, value={:.2f}, prior={:.3f}, node={})".\
-            format(self.visits, self.value, self.prior, self.node)
+        return "Edge(N={}, S= {}, V={:.2f}, P={:.3f}, {}, {})".\
+            format(self.visits, self.search_outcome,
+                   self.value, self.prior,
+                   self.node, self.cmd)
 
 
 class Node:
@@ -38,10 +41,17 @@ class Node:
         self.index = index
         self.edges = []
         self.score = 0
+        self.envscore = 0
         self.visits = 0
         self.reward = 0
         self.obs = None
         self.tensor = None
+
+        # training improvement
+        self.extra_info = {
+            'has_full_inventory': False,
+            'has_opened_fridge': False,
+            'has_examined_cookbook': False}
 
     def isleaf(self):
         return len(self.edges) == 0
@@ -49,6 +59,7 @@ class Node:
     def addchild(self, cmd: str, prior: float):
         index = len(self.edges)
         child = Node(self, index)
+        child.extra_info = self.extra_info.copy()
         edge = Edge(cmd, prior, child)
         self.edges.append(edge)
 
@@ -82,13 +93,16 @@ class Node:
         ans.reverse()
         return ans
 
-    def cmd_history(self):
+    def cmd_history(self, cmds_only=False):
         current = self
         ans = []
         while current.parent is not None:
             index = current.index
             cmd = current.parent.edges[index].cmd
-            ans.append((index, cmd))
+            if cmds_only:
+                ans.append(cmd)
+            else:
+                ans.append((index, cmd))
             current = current.parent
         ans.reverse()
         return ans
@@ -97,7 +111,7 @@ class Node:
         if self.isleaf():
             return "Leaf()"
         else:
-            msg = "Node(visits={}, reward={:.2f})"
+            msg = "Node(N={}, R={:.2f})"
             return msg.format(self.visits, self.reward)
 
 
@@ -111,7 +125,7 @@ class MCTSAgent:
                  network: tf.keras.Model,
                  cpuct: Optional[float] = 0.4,
                  max_steps: int = 100,
-                 temperature: float = 1.0):
+                 temperature: float = 0.5):
         # the environment can only have ONE game
         self.gamefile = gamefile
         self.current = Node(None, None)
@@ -148,34 +162,35 @@ class MCTSAgent:
         """Update to the root"""
         current = self.current
         parent = current.parent
-        accrue = 0
+        sum_from_leaf = value
 
         while parent is not None:
             edge = parent.edges[current.index]
             edge.visits += 1
-            accrue += current.score - parent.score
-            edge.value += (accrue + value - edge.value) / edge.visits
+            sum_from_leaf += current.score - parent.score
+            edge.value += (sum_from_leaf - edge.value) / edge.visits
             current, parent = parent, parent.parent
 
     def backup_node_reward(self, final_ret: float):
         """Update to the root"""
         current = self.current
         parent = current.parent
-        accrue = 0
+        sum_from_leaf = final_ret
 
         while parent is not None:
             parent.visits += 1
-            accrue += current.score - parent.score
-            parent.reward += \
-                (accrue + final_ret - parent.reward) / parent.visits
+            sum_from_leaf += current.score - parent.score
+
+            # average rewards
+            parent.reward += (sum_from_leaf - parent.reward) / parent.visits
             current, parent = parent, parent.parent
 
     def backup_final_ret(self, infos: dict, steps: int):
-        gamelen = steps / self.max_steps
-        winfactor = infos['has_won'] * (1.0 - 0.5 * gamelen)
-        lossfactor = infos['has_lost'] * (1.0 - 0.5 * gamelen)
+        # gamelen = steps / self.max_steps
+        winfactor = infos['has_won']  # * (1.0 - 0.5 * gamelen)
+        lossfactor = infos['has_lost']  # * (1.0 - 0.5 * gamelen)
         final_ret = winfactor - lossfactor
-        self.backup_node_reward(final_ret)
+        self.backup_node_reward(final_ret)  # for learning
         self.backup_edge_value(final_ret)  # improve current gameplay
         return final_ret
 
@@ -197,29 +212,45 @@ class MCTSAgent:
     def select_move(self, from_search=False, verbose=False) -> Tuple[int, str]:
         """Select using PUCT or node count, expand for new nodes"""
         node = self.current
-        N = sum(e.visits for e in node.edges)  # TODO: possible bug here ????
+        c0 = 5
+        N = sum(e.visits for e in node.edges) + c0
         eps = self.cpuct * len(node.edges) * np.sqrt(N)
-        ucb = [e.value + eps * e.prior / (1 + e.visits) for e in node.edges]
-        if from_search:  # ucb is not used, only counts
-            tau = 0.01 + (1.0 / self.temperature) *\
+        ucb = [e.value + eps * e.prior / (c0 + e.visits) for e in node.edges]
+
+        if from_search:
+            # ucb is not used, only counts
+            tau = 0.01 + self.temperature *\
                 (1.0 - self.current.level() / self.max_steps)
-            probs = np.array([(e.visits + 1)**(1 / tau) for e in node.edges])
-            probs /= probs.sum()
+
+            probs = [(e.search_outcome + 0.01)**(1/tau) for e in node.edges]
+            probs = np.array(probs) / sum(probs)
+
+            # chooce proportionally
             index = np.random.choice(range(len(probs)), p=probs)
         else:
             node = self.current
             index = np.argmax(ucb)
 
         if verbose:
-            values = [e.value for e in node.edges]
-            visits = [e.visits for e in node.edges]
-            cmds = [e.cmd for e in node.edges]
-            ix = range(len(node.edges))
-            msg = "{}: val: {:.2f}, N: {}, UCB: {:.2f}, cmd: {}"
-            for i, c, v, n, u in zip(ix, cmds, values, visits, ucb):
-                print(msg.format(i, v, n, u, c))
+            msg = "NODE: Visits: {}, Reward: {:.2f}, " +\
+                  "Score: {:.2f}, Envscore: {}"
+            print(msg.format(
+                node.visits, node.reward, node.score, node.envscore))
+            # print("CMD HISTORY:", node.cmd_history(cmds_only=True))
 
-        return index, node.edges[index].cmd
+            values = [e.value for e in node.edges]
+            counts = [e.search_outcome for e in node.edges]
+            cmds = [e.cmd for e in node.edges]
+            priors = [e.prior for e in node.edges]
+            ix = range(len(node.edges))
+            msg = "EDGE {}: V: {:.2f}, P: {:.2f}, S: {}, UCB: {:.2f}, cmd: {}"
+            for i, c, p, v, n, u in zip(ix, cmds, priors, values, counts, ucb):
+                print(msg.format(i, v, p, n, u, c))
+
+        edge = node.edges[index]
+        edge.search_outcome += 1
+
+        return index, edge.cmd
 
     def reset(self):
         """This one should be called instead of env.reset"""
@@ -227,6 +258,7 @@ class MCTSAgent:
         env = self.env
         obs, infos = env.reset()
         obs = obs[obs.find("="):]  # removes textworld legend
+
         return env, obs, infos
 
     def close(self):
@@ -235,29 +267,115 @@ class MCTSAgent:
 
     def step(self, index: int, cmd: str):
         """This one should be called instead of env.reset"""
+        node = self.current
+        node_score = node.score
+        node_envscore = node.envscore
         env = self.env
-        obs, score, done, infos = env.step(cmd)
-        self.current = self.current.edges[index].node
+
+        obs, envscore, done, infos = env.step(cmd)
+        self.current = node.edges[index].node
+        self.current.envscore = envscore
         self.current.obs = obs
-        return obs, score, done, infos
+        self.update_node_extra_info()
+
+        ret = envscore - node_envscore
+        score = node_score + ret / self.max_score
+        self.current.score = score
+        self.apply_score_incentives()
+
+        return obs, envscore, done, infos
 
     def restore_checkpoint(self, subtree_root: 'Node') -> str:
         """since game doesn't support copies"""
-        score, done = 0, False
+        envscore, done = 0, False
         env, obs, infos = self.reset()
         cmd_history = subtree_root.cmd_history()
         if len(cmd_history) > 0:
             for index, cmd in cmd_history:
-                try:
-                    obs, score, done, infos = self.step(index, cmd)
-                except:
-                    pdb.set_trace()
-        return obs, score, done, infos
+                obs, envscore, done, infos = self.step(index, cmd)
+        self.current.extra_info = subtree_root.extra_info.copy()
+        return obs, envscore, done, infos
 
-    def avail_cmds(self, infos: dict):
-        cmdlist = [cmd for cmd in infos['admissible_commands']
-                   if cmd not in ['inventory', 'look']]
+    def available_cmds(self, infos: dict):
+        node = self.current
+        admissible = infos['admissible_commands']
+
+        if 'close fridge' in admissible:
+            node.extra_info['has_opened_fridge'] = True
+
+        cmdlist = [cmd for cmd in admissible if
+                   cmd != 'inventory' and
+                   cmd != 'look' and
+                   'insert' not in cmd and
+                   'put' not in cmd and
+                   'close' not in cmd and
+                   'examine' not in cmd]
+
+        if not node.extra_info['has_full_inventory']:
+            cmdlist = [cmd for cmd in cmdlist if 'drop ' not in cmd]
+
+        if not node.extra_info['has_examined_cookbook']:
+            cmdlist = [cmd for cmd in cmdlist if
+                       'take ' in cmd or
+                       'open ' in cmd]
+            cmdlist.extend(['go north', 'go west', 'go east', 'go south'])
+            if 'examine cookbook' in admissible:
+                cmdlist.append('examine cookbook')
+
+        elif not node.extra_info['has_opened_fridge']:
+            pass
+            # if 'open fridge' in admissible:
+            #     cmdlist = ['open fridge']
+
+        if len(cmdlist) == 0:
+            cmdlist = ['examine cookbook', 'examine fridge',
+                       'go north', 'go west', 'go east', 'go south']
+            node.extra_info['has_full_inventory'] = True  # can be game bug
+
         return cmdlist
+
+    def update_node_extra_info(self):
+        obs = self.current.obs
+        cmd = self.current.parent.edges[self.current.index].cmd
+        if "carrying too many things" in obs:
+            self.current.extra_info['has_full_inventory'] = True
+        if cmd == 'open fridge':
+            self.current.extra_info['has_opened_fridge'] = True
+        if cmd == 'examine cookbook':
+            self.current.extra_info['has_examined_cookbook'] = True
+
+    def apply_score_incentives(self):
+        # penalize droping and examining
+        node = self.current
+        obs = node.obs
+        cmd = node.parent.edges[node.index].cmd
+        if cmd != 'examine cookbook' and 'examine ' in cmd:
+            node.score -= 0.1
+        elif cmd == 'examine cookbook':
+            node.score += 0.2
+        elif 'drop ' in cmd:
+            if 'carrying too many things' in obs:
+                node.score += 0.1
+            else:
+                node.score -= 0.1
+        elif 'take ' in cmd and 'carrying too many things' in obs:
+                node.score -= 0.1
+        elif 'close ' in cmd:
+            node.score -= 0.1
+        elif 'put ' in cmd:
+            node.score -= 0.1
+        elif 'insert ' in cmd:
+            node.score -= 0.1
+        elif cmd != 'open fridge' and 'open ' in cmd:
+            node.score += 0.1
+        elif cmd == 'open fridge':
+            node.score += 0.2
+        elif 'go ' in cmd and "can't go that way" in obs:
+            node.score -= 0.05
+        elif 'cook ' in cmd and "burned the" in obs:
+            node.score -= 0.05
+        elif 'open ' in cmd and "You have to open the" in obs:
+            node.score -= 0.05
 
     def play_episode(self,
                      subtrees: int = 1,
@@ -270,9 +388,9 @@ class MCTSAgent:
             print("MISSION: ", self.mission)
             print("0. COMPUTER: ", obs)
 
-        score = 0
+        envscore = 0
         done = False
-        num_steps = 1
+        num_steps = 0
 
         while not done:
             # span subtrees from current node as root
@@ -282,7 +400,7 @@ class MCTSAgent:
             subtree_root = self.current
 
             if self.current.isleaf():
-                cmdlist = self.avail_cmds(infos)
+                cmdlist = self.available_cmds(infos)
                 self.expand(cmdlist)
 
             for st in range(subtrees):
@@ -290,36 +408,42 @@ class MCTSAgent:
                 num_subtree_steps = num_steps
                 while not done and subtree_depth < max_subtree_depth:
                     if self.current.isleaf():
-                        cmdlist = self.avail_cmds(infos)
+                        cmdlist = self.available_cmds(infos)
                         self.expand(cmdlist)
+
                     index, cmd = self.select_move()
-                    obs, score, done, infos = self.step(index, cmd)
-                    self.current.score = score / self.max_score
+                    obs, envscore, done, infos = self.step(index, cmd)
+
                     subtree_depth += 1
                     num_subtree_steps += 1
 
-                # backup final return if done, expand if leaf
-                if done:
-                    self.backup_final_ret(infos, num_subtree_steps)
+                # subtree losses if there aren't additional points
+                if done and not infos['has_won']:
+                    infos['has_lost'] = True
+
+                self.backup_final_ret(infos, num_subtree_steps)
 
                 # restore root
-                obs, score, done, infos =\
+                obs, envscore, done, infos =\
                     self.restore_checkpoint(subtree_root)
 
             # now select from current
             index, cmd = self.select_move(from_search=True, verbose=verbose)
-            obs, score, done, infos = self.step(index, cmd)
-            self.current.score = score / self.max_score
+            obs, envscore, done, infos = self.step(index, cmd)
+
             num_steps += 1
 
             if verbose:
-                print("{}. AGENT: {}".format(num_steps, cmd))
-                print("{}. COMPUTER: {}".format(num_steps, obs))
+                msg = "\n{}. AGENT: {}\n{}. COMPUTER: {}"
+                print(msg.format(num_steps, cmd, num_steps, obs))
+
+        if done and not infos['has_won']:
+            infos['has_lost'] = True
 
         final_ret = self.backup_final_ret(infos, num_steps)
-        reward = score + final_ret
+        reward = self.current.score + final_ret
 
-        return score, num_steps - 1, infos, reward
+        return envscore, num_steps, infos, reward
 
     def dump_tree(self) -> Dict:
         """simple tree traversal for dumping data"""
@@ -333,11 +457,8 @@ class MCTSAgent:
                 tovisit.extend(node.children())
 
                 # extract edge data
-                cmds_node = []
-                counts_node = []
-                for edge in node.edges:
-                    cmds_node.append(edge.cmd)
-                    counts_node.append(edge.visits)
+                cmds_node = [e.cmd for e in node.edges]
+                counts_node = [e.search_outcome for e in node.edges]
 
                 # add record to data
                 memory, obs = node.obs_history(), node.obs
@@ -345,6 +466,7 @@ class MCTSAgent:
                           "counts": counts_node,
                           "reward": node.reward,
                           "obs": obs,
-                          "memory": memory}
+                          "memory": memory,
+                          "level": node.level()}
                 data.append(record)
         return data

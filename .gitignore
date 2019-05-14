@@ -3,4 +3,4 @@
 __pycache__/
 trained_models/
 *games*/
-data/
+*data*/

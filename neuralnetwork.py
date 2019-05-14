@@ -61,6 +61,10 @@ class BahdanauAttention(layers.Layer):
         score = self.V(tf.math.tanh(self.W1(values) + self.W2(hidden_time_axis)))
         # attention_weights shape == (batch_size, max_length, 1)
         # we get 1 at the last axis because we are applying score to self.V
+        score = tf.clip_by_value(
+            score,
+            clip_value_min=-10,
+            clip_value_max=10)
         attention_weights = tf.math.softmax(score, axis=1)
         # context_vector shape after sum == (batch_size, hidden_size)
         context_vector = attention_weights * values
@@ -130,7 +134,7 @@ class AlphaTextWorldNet(models.Model):
     """
     Learn to play from memory
     """
-    REG_PENALTY = 1e-4
+    REG_PENALTY = 1e-5
 
     def __init__(self,  embeddings, vocab, **kwargs):
         super(AlphaTextWorldNet, self).__init__(**kwargs)
@@ -246,6 +250,10 @@ class AlphaTextWorldNet(models.Model):
         policy = self.policy_head(cmdjointx, training=training)  # (cmds x 1)
         policy = tf.math.softmax(policy, axis=0)  # cmds x 1
         policy = tf.squeeze(policy, axis=1)
+        policy = tf.clip_by_value(
+            policy,
+            clip_value_min=-10,
+            clip_value_max=10)
 
         if return_obs_tensor:
             return value, policy, tf.squeeze(obstensor)

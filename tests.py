@@ -7,6 +7,7 @@ import glob
 import time
 import ujson
 import math
+import re
 
 import pdb
 
@@ -18,7 +19,7 @@ with open('../TextWorld/montecarlo/vocab.txt', 'r') as fn:
 
 embeddings, vocab = tu.load_embeddings(
     embeddingsdir="../../glove.6B/",
-    embedding_dim=100,
+    embedding_dim=100,  # try 50
     vocab=textworld_vocab)
 
 
@@ -30,63 +31,48 @@ embeddings, vocab = tu.load_embeddings(
 #     training=True)
 # network.save_weights("trained_models/init.h5")
 
-# print(network.memory)
-# network.flush_memory()
-
-# network.play_mode()
-# testrun = network("you are in the ", ["."])
-# network.save_weights("trained_models/init.h5")
-# print(network.memory)
-# network.flush_memory()
-
-# network.load_weights("trained_models/init.h5")
 
 num_games = 100
-max_time = 180
-max_episodes = 3
+max_time = 45
+max_episodes = 5
 gamefiles = glob.glob("games/*.ulx")
 gamefiles = [gamefiles[i] for i in
              np.random.permutation(range(len(gamefiles)))]
 
-msg = "game {}, episode: {:2d}, moves: {:3d}, \
-       score: {}/{}, reward: {:.2f}, time: {:.2f}"
-
 network = nn.load_network(
     embeddings, vocab,
-    "trained_models/init_pretrained.h5")
+    "trained_models/1557794312.h5")
 
 optim = tf.optimizers.Nadam(
-    learning_rate=0.0005,
+    learning_rate=0.000005,
     clipnorm=30.0,
     beta_1=0.5,
     beta_2=0.75)
 
 for g in range(num_games):
     gamefile = gamefiles[g]
+    print("Opening game {}".format(gamefile))
+
     # rain a few round with 25 to get network started
-    agent = mcts.MCTSAgent(gamefile, network, cpuct=0.1, max_steps=50)
+    agent = mcts.MCTSAgent(gamefile, network, cpuct=0.3, max_steps=25)
 
     # 1. Play and generate data ----------------------------
     gtime, ep = 0, 0
     while ep < max_episodes and gtime < max_time:
         timer = time.time()
-        score, num_moves, infos, reward =\
-            agent.play_episode(subtrees=8, max_subtree_depth=8, verbose=True)
+        envscore, num_moves, infos, reward =\
+            agent.play_episode(subtrees=50, max_subtree_depth=16, verbose=True)
         gtime += time.time() - timer
-        print(msg.format(g, ep, num_moves, score,
+        msg = "game {}, episode: {:2d}, moves: {:3d}, " +\
+              "envscore: {}/{}, reward: {:.2f}, time: {:.2f}"
+        print(msg.format(g, ep, num_moves, envscore,
                          infos["max_score"], reward, gtime))
-
-        if num_moves > 10:
-            ep += 1
-
-    print("Root --------")
-    print(agent.root)
-    print("Root Edges --")
-    for edge in agent.root.edges:
-        print(edge)
+        ep += 1
 
     data = agent.dump_tree()
-    datafile = "data/tree_{}.json".format(gamefile[6:-4])
+
+    tstamp = math.trunc(time.time())
+    datafile = "data/{}.json".format(tstamp)
 
     with open(datafile, 'w') as fn:
         ujson.dump(data, fn)
@@ -94,21 +80,49 @@ for g in range(num_games):
     agent.close()
 
     # Let's train with the data, for the moment only this tree,
-    # TODO!: replay is necessary
+    # TODO!: replay is necessary, current form is replay is
+    # remembering games, but it would be better to remember data
+    # points from several random games
 
     # 2. Train -----------------------------------------------
-    # datafile = '/home/mauriciogtec/Github/AlphaTextWorld/data/tree_tw-simple-rDense+gDetailed+train-house-GP-p1RLFX7MU7KjFy0d.json'
-    with open(datafile, 'r') as fn:
-        data = ujson.load(fn)
 
-    batch_size = 16  # larger means more memory
-    epochs = 1
+    # Pull random games from last games
+    num_choice = 10
+    num_consider = 25
+    all_datafiles = glob.glob("data/*.json")
+    datatstamps = [int(x[5:-5]) for x in all_datafiles]
+    datatstamps.sort(reverse=True)
+    datatstamps = datatstamps[1:num_consider]  # exclude current
+
+    if len(datatstamps) > num_choice:
+        datatstamps = np.random.choice(
+            datatstamps,
+            size=num_choice,
+            replace=False)
+
+    # extend current data
+    for s in datatstamps:
+        fn = "data/{}.json".format(s)
+        print("Adding replay data from:", fn)
+        with open(datafile, 'r') as fn:
+            d = ujson.load(fn)
+            data.extend(d)
+
+    data = [x for x in data if
+            sum(x['counts']) > 10 and
+            len(x['cmdlist']) > 2]  # ensure quality data
+
     data = np.random.permutation(data)
-    num_batches = len(data) // batch_size
 
-    print("Optimizing {} batches per epoch".format(num_batches))
+    batch_size = min(len(data), 8) if len(data) > 0 else 1
+    num_batches = min(len(data) // batch_size, 100)
 
-    for e in range(epochs):
+    num_epochs = 2 if num_batches < 40 else 1
+
+    msg = "OPTIMIZATION: epochs: {} batches: {}  time: {}"
+    print(msg.format(num_epochs, num_batches, tstamp))
+
+    for e in range(num_epochs):
         for b in range(num_batches):
             batch = data[(b * batch_size):((b + 1) * batch_size)]
             loss = 0
@@ -124,30 +138,27 @@ for g in range(num_games):
                         training=True)
 
                     # Create target prob vector
-                    probs = np.array(datum['counts'], dtype=np.float32) + 1e-3
+                    probs = np.array(datum['counts'], dtype=np.float32)
                     probs /= probs.sum()
-                    eps = 0.1 / K
+                    eps = 0.1
                     dnoise = np.random.dirichlet(np.ones(K))
                     dnoise = dnoise.astype(np.float32)
                     probs = (1.0 - eps) * probs + eps * dnoise
 
                     # Policy loss
                     reward = datum['reward']
-                    vloss += 0.5 * tf.reduce_sum(
-                        tf.square(vhat - reward)) / batch_size
                     logphat = tf.math.log(phat + 1e-6)
+                    vloss += 10 * tf.losses.Huber(delta=0.5)(
+                        vhat, reward) / batch_size
                     ploss += - tf.reduce_sum(logphat * probs) / batch_size
                     rloss += tf.math.add_n(
                         [l for l in network.losses
-                            if not np.isnan(l.numpy())]) / batch_size
+                         if not np.isnan(l.numpy())]) / batch_size
                 loss = vloss + ploss + rloss
 
-                if np.isnan(loss.numpy().item()):
-                    pdb.set_trace()
-
-            msg = "Optimizing... epoch: {} batch: {:3d}, " +\
+            msg = "Optimizing... epoch: {} batch: {:2d}, " +\
                   "loss: {:.2f}, ploss: {:.2f}, " +\
-                  "rloss: {:.2f}, vloss {:.2f}"
+                  "rloss: {:.3f}, vloss {:.2f}"
             print(msg.format(
                 e, b,
                 loss.numpy().item(), ploss.numpy().item(),
@@ -156,8 +167,8 @@ for g in range(num_games):
             update = optim.apply_gradients(
                 zip(gradients, network.trainable_variables))
 
-    wfile = "trained_models/w{:05d}.h5".format(math.trunc(time.time()))
-    network.save_weights(wfile)
+            wfile = "trained_models/{}.h5".format(tstamp)
+            network.save_weights(wfile)
 
     # data = agent.dump_data()
 
