@@ -102,8 +102,8 @@ for g in range(num_games):
 
     # extend current data
     for s in datatstamps:
-        fn = "data/{}.json".format(s)
-        print("Adding replay data from:", fn)
+        datafile = "data/{}.json".format(s)
+        print("Adding replay data from:", datafile)
         with open(datafile, 'r') as fn:
             d = ujson.load(fn)
             data.extend(d)
