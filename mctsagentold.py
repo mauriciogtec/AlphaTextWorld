@@ -120,14 +120,12 @@ class MCTSAgent:
     Agents save all visited nodes, root,  MCTS related prameters,
     including the gaming neural network
     """
-
     def __init__(self,
                  gamefile: str,
                  network: tf.keras.Model,
                  cpuct: Optional[float] = 0.4,
                  max_steps: int = 100,
-                 temperature: float = 0.5,
-                 verbs: List[str] = None):
+                 temperature: float = 0.5):
         # the environment can only have ONE game
         self.gamefile = gamefile
         self.current = Node(None, None)
@@ -138,9 +136,6 @@ class MCTSAgent:
         self.max_steps = max_steps
         self.temperature = temperature
 
-        self.sessvocab = []
-        self.sessvocab2id = {}
-
         infos_to_request = textworld.EnvInfos(
             description=False,
             inventory=False,
@@ -149,7 +144,6 @@ class MCTSAgent:
             admissible_commands=True,
             entities=True,
             max_score=True)
-
         env_id = textworld.gym.register_games(
             game_files=[gamefile],
             request_infos=infos_to_request,

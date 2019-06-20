@@ -198,6 +198,7 @@ class AlphaTextWorldNet(models.Model):
             x = self.cmd_encoder(x, training=training)
         return x
 
+    # @tf.function # faster eval slower backprop
     def call(self, obs, cmdlist,
              memory=[],
              training=None,

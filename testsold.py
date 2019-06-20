@@ -1,5 +1,8 @@
+import neuralnetwork as nn
+import textutils as tu
 import numpy as np
 import tensorflow as tf
+import mctsagent as mcts
 import glob
 import time
 import ujson
@@ -7,11 +10,6 @@ import math
 import re
 
 import pdb
-
-# import neuralnetwork as nn
-import textutils as tu
-import attentionnetwork as nn
-# import mctsagent as mcts
 
 textworld_vocab = set()
 with open('../TextWorld/montecarlo/vocab.txt', 'r') as fn:
@@ -21,14 +19,9 @@ with open('../TextWorld/montecarlo/vocab.txt', 'r') as fn:
 
 embeddings, vocab = tu.load_embeddings(
     embeddingsdir="../../glove.6B/",
-    embedding_dim=300,  # try 50
+    embedding_dim=100,  # try 50
     vocab=textworld_vocab)
-np.random.seed(110104)
-index = np.random.permutation(range(300))[:256]
-embeddings = embeddings[index, :]
 
-
-textworld_vocab = textworld_vocab & set(vocab)
 
 # network = nn.AlphaTextWorldNet(embeddings, vocab)
 # testrun = network(
