@@ -21,6 +21,9 @@ parser = argparse.ArgumentParser(description=description)
 parser.add_argument('--subtrees',
                     type=int, default=10,
                     help='Subtrees to spawn.')
+parser.add_argument('--temperature',
+                    type=float, default=0.5,
+                    help='determines randomness')
 parser.add_argument('--subtree_depth',
                     type=int, default=5,
                     help='Max depth of search trees.')
@@ -31,6 +34,9 @@ parser.add_argument('--min_time',
                     type=float, default=60,
                     help=''.join(['Min time playing. If a game ends sooner',
                                   ', it will play another episode.']))
+parser.add_argument('--verbose',
+                    type=bool, default=False,
+                    help='Prints every game')
 parser.add_argument('--cwd', default='./',
                     help='Directory from which to launch')
 parser.add_argument('--output_dir', default='data/',
@@ -45,6 +51,8 @@ max_steps = args.max_steps
 subtrees = args.subtrees
 subtree_depth = args.subtree_depth
 output_dir = args.output_dir
+temperature = args.temperature
+verbose = args.verbose
 
 sys.path.append(cwd)
 from custom_layers import *
@@ -82,7 +90,7 @@ if len(models) > 0:
     network.load_weights(model)
 
 # rain a few round with 25 to get network started
-gamefiles = glob.glob(cwd + "../allgames/*.ulx")
+gamefiles = glob.glob(cwd + "../train/*.ulx")
 
 # gamefile = gamefiles[gameindex]
 gamefile = np.random.choice(gamefiles)
@@ -93,7 +101,7 @@ agent = mcts.MCTSAgent(
     cpuct=0.4,
     dnoise=0.05,
     max_steps=max_steps,
-    temperature=0.1)
+    temperature=temperature)
 
 # Play and generate data ----------------------------
 t = 0.0
@@ -103,7 +111,7 @@ while t < min_time:
     envscore, num_moves, infos, reward = agent.play_episode(
         subtrees=subtrees,
         max_subtree_depth=subtree_depth,
-        verbose=True)
+        verbose=verbose)
     msg = "moves: {:3d}, envscore: {}/{}, reward: {:.2f}"
     print(msg.format(num_moves, envscore, infos["max_score"], reward))
     data.extend(agent.dump_tree(mainbranch=True))

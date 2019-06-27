@@ -132,7 +132,7 @@ for g in range(num_games):
 
     data_current = agent.dump_tree()
 
-    tstamp = math.trunc(time.time())
+    tstamp = math.trunc(100 * time.time())
     datafile = "data/{}.json".format(tstamp)
 
     with open(datafile, 'w') as fn:
