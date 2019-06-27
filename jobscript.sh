@@ -12,6 +12,7 @@
 
 module load intel/17.0.4
 module load python3/3.6.3
+module load hdf5/1.8.16
 
 export MKL_NUM_THREADS=1
 export GOTO_NUM_THREADS=1

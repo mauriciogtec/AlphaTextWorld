@@ -86,24 +86,34 @@ else:
 
 
 def train(model, optim, data_batch):
-    batch_size = len(data_batch)
-    memory_batch = [d['memory'] for d in data_batch]
+    batch_size = len(inputs_batch)
+    
+    inputs_batch = [d['inputs'] for d in data]
     cmdlist_batch = [d['cmdlist'] for d in data_batch]
-    value_batch = [d['reward'] for d in data_batch]
-    counts_batch = [d['counts'] for d in data_batch]
+    value_batch = [d['value'] for d in data]
+    counts_batch = [d['counts'] for d in data]
     policy_batch = [np.array(x) / sum(x) for x in counts_batch]
-    nwoutoyt_batch = [np.array(d['nwoutput']) for d in data_batch]
+    policy_batch = [0.98 * p + 0.02 / len(p) for p in policy]
+    nwoutput_batch = [d['nwoutput'] for d in data_batch]
 
-    inputs_batch = zip(memory_batch, cmdlist_batch,
-                       value_batch, policy_batch)
     value_loss, policy_loss, cmdgen_loss, reg_loss = 0, 0, 0, 0
     with tf.GradientTape() as tape:
-        for memory, cmdlist, value, policy in inputs_batch:
+        for i in range(batch_size):
+            x = inputs_batch[i]
+            cmdlist_input = tf.constant(x['cmdlist_input'], tf.int32)
+            memory_input = tf.constant(x['memory_input'], tf.int32)
+            cmdprev_input = tf.constant(x['cmdprev_input'], tf.int32)
+            entvocab_input = tf.constant(x['entvocab_input'], tf.int32)
+            location_input = tf.constant(x['location_input'], tf.int32)
             # skip round if there's only one command
-            if len(cmdlist) < 2:
-                continue
+            # if len(cmdlist) < 2:
+            #     continue
             # evaluate model
-            inputs = {'memory': memory, 'cmdlist': cmdlist}
+            inputs = {'memory_input': memory_input,
+                      'cmdlist_input': cmdlist_input,
+                      'entvocab_input': entvocab_input,
+                      'cmdprev_input': cmdprev_input,
+                      'location_input': location_input}
             output = model(inputs, training=True)
             # value loss
             vhat = output['value']
@@ -143,19 +153,19 @@ def train(model, optim, data_batch):
 # Pull random games from last games
 num_choice = 50
 num_consider = 10
-all_datafiles = glob.glob("data/*.json")
-all_datafiles.sort(reverse=True)
-all_datafiles = all_datafiles[1:num_consider]  # exclude current
+all_batchfiles = glob.glob("data/*.json")
+all_batchfiles.sort(reverse=True)
+all_batchfiles = all_batchfiles[1:num_consider]  # exclude current
 
-if len(all_datafiles) > num_choice:
+if len(all_batchfiles) > num_choice:
     datatstamps = np.random.choice(
-        all_datafiles,
+        all_batchfiles,
         size=num_choice,
         replace=False)
 
 # extend current data
 data = []
-for datafile in all_datafiles:
+for datafile in all_batchfiles:
     # datafile = "data/{}.json".format(s)
     print("Adding replay data from:", datafile)
     with open(datafile, 'r') as fn:
@@ -169,11 +179,6 @@ for datafile in all_datafiles:
 
 # order data and obtain value policy and nextwords
 data = np.random.permutation(data)
-inputs_data = [d['inputs'] for d in data]
-value_data = [d['value'] for d in data]
-counts_data = [d['counts'] for d in data]
-nw = [d['cmd'] for d in data]
-
 
 
 ndata = len(data)
@@ -189,11 +194,11 @@ print(msg.format(num_epochs, num_batches, tstamp))
 
 for e in range(num_epochs):
     for b in range(num_batches):
-        inputs_batch = get_batch(inputs, b, batch_size)
+        data_batch = get_batch(data, b, batch_size)
 
         try:
             vloss, ploss, cgloss, rloss, loss = train(
-                data_batch, value_batch, policy_batch)
+                network, optim, data_batch)
         except Exception as e:
             print(e)
             continue
