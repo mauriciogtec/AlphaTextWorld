@@ -15,9 +15,9 @@ import os
 # ----------------------
 description = "Play a round of games."
 parser = argparse.ArgumentParser(description=description)
-parser.add_argument('--gameindex',
-                    type=int, default=1,
-                    help='Number of games to be played.')
+# parser.add_argument('--gameindex',
+#                     type=int, default=1,
+#                     help='Number of games to be played.')
 parser.add_argument('--subtrees',
                     type=int, default=10,
                     help='Subtrees to spawn.')
@@ -31,7 +31,7 @@ parser.add_argument('--min_time',
                     type=float, default=60,
                     help=''.join(['Min time playing. If a game ends sooner',
                                   ', it will play another episode.']))
-parser.add_argument('--cwd', default='.',
+parser.add_argument('--cwd', default='./',
                     help='Directory from which to launch')
 parser.add_argument('--output_dir', default='data/',
                     help='Directory in which to save game results')
@@ -39,7 +39,7 @@ args = parser.parse_args()
 print("Arguments: ", args)
 
 cwd = args.cwd
-gameindex = args.gameindex
+# gameindex = args.gameindex
 min_time = args.min_time
 max_steps = args.max_steps
 subtrees = args.subtrees
@@ -54,7 +54,7 @@ import mctsagent as mcts
 # ----------------------
 
 textworld_vocab = set()
-with open(cwd + '/textworld_vocab.txt', 'r') as fn:
+with open(cwd + 'textworld_vocab.txt', 'r') as fn:
     for line in fn:
         word = line[:-1]
         textworld_vocab.add(word)
@@ -75,7 +75,7 @@ embeddings = embeddings[index, :]
 network = nn.AlphaTextWorldNet(embeddings, vocab)
 
 # load latest weights if available
-modeldir = cwd + "./trained_models/"
+modeldir = cwd + "trained_models/"
 models = glob.glob(cwd + ".h5")
 if len(models) > 0:
     latest = max(models)
@@ -110,7 +110,7 @@ while t < min_time:
     t += time.time() - timer
 
 tstamp = math.trunc(100 * time.time())
-datafile = cwd + "/{}/{}.json".format(output_dir, tstamp)
+datafile = cwd + "{}/{}.json".format(output_dir, tstamp)
 with open(datafile, 'w') as fn:
     ujson.dump(data, fn)
 print(0)
