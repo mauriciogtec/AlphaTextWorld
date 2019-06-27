@@ -140,4 +140,4 @@ tstamp = math.trunc(100 * time.time())
 datafile = cwd + "{}/{}.json".format(output_dir, tstamp)
 with open(datafile, 'w') as fn:
     ujson.dump(data, fn)
-0
+print(0)
