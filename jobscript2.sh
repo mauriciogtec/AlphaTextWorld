@@ -19,37 +19,37 @@ export HDF5_USE_FILE_LOCKING=FALSE
 
 
 cd /work/05863/mgarciat/stampede2/AlphaTextWorld/
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 & 
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 & 
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 --min_time 15 &
 python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0
-wait
+--min_time 15 wait
 

@@ -43,7 +43,7 @@ parser.add_argument('--max_steps',
                     type=int, default=25,
                     help='Max number of steps per game. Defaults to 100.')
 parser.add_argument('--min_time',
-                    type=float, default=60,
+                    type=float, default=15,
                     help=''.join(['Min time playing. If a game ends sooner',
                                   ', it will play another episode.']))
 parser.add_argument('--verbose',
