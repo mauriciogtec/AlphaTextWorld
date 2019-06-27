@@ -12,14 +12,14 @@ import ujson
 import math
 import os
 
-import socket
-from time import sleep
+# import socket
+# from time import sleep
 
 
-def work(jobnum):
-    print("Starting job on {}.".format(socket.gethostname()))
-    # print("Finished job {}...\n".format(jobnum))
-work(0)
+# def work(jobnum):
+#     print("Starting job on {}.".format(socket.gethostname()))
+#     # print("Finished job {}...\n".format(jobnum))
+# work(0)
 
 # ----------------------
 description = "Play a round of games."
@@ -51,7 +51,7 @@ parser.add_argument('--cwd', default='./',
 parser.add_argument('--output_dir', default='data/',
                     help='Directory in which to save game results')
 args = parser.parse_args()
-print("Arguments: ", args)
+# print("Arguments: ", args)
 
 cwd = args.cwd
 # gameindex = args.gameindex
@@ -104,7 +104,9 @@ gamefiles = glob.glob(cwd + "../train/*.ulx")
 # gamefile = gamefiles[gameindex]
 gamefile = np.random.choice(gamefiles)
 
-print("Opening game {}".format(gamefile))
+if verbose:
+    print("Opening game {}".format(gamefile))
+
 agent = mcts.MCTSAgent(
     gamefile, network,
     cpuct=0.4,
@@ -122,7 +124,8 @@ while t < min_time:
         max_subtree_depth=subtree_depth,
         verbose=verbose)
     msg = "moves: {:3d}, envscore: {}/{}, reward: {:.2f}"
-    print(msg.format(num_moves, envscore, infos["max_score"], reward))
+    if verbose:
+        print(msg.format(num_moves, envscore, infos["max_score"], reward))
     data.extend(agent.dump_tree(mainbranch=True))
     t += time.time() - timer
 
@@ -130,4 +133,4 @@ tstamp = math.trunc(100 * time.time())
 datafile = cwd + "{}/{}.json".format(output_dir, tstamp)
 with open(datafile, 'w') as fn:
     ujson.dump(data, fn)
-print(0)
+0
