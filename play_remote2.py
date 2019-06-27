@@ -92,10 +92,10 @@ network = nn.AlphaTextWorldNet(embeddings, vocab)
 
 # load latest weights if available
 modeldir = cwd + "trained_models/"
-models = glob.glob(cwd + ".h5")
+models = glob.glob(modeldir + "*.h5")
 if len(models) > 0:
     latest = max(models)
-    network.load_weights(model)
+    network.load_weights(latest)
 
 # rain a few round with 25 to get network started
 gamefiles = glob.glob(cwd + "../train/*.ulx")
@@ -126,7 +126,7 @@ while t < min_time:
     envscore, num_moves, infos, reward = agent.play_episode(
         subtrees=subtrees,
         max_subtree_depth=subtree_depth,
-        verbose=True)
+        verbose=False)
     msg = "moves: {:3d}, envscore: {}/{}, reward: {:.2f}"
     # if verbose:
     #     print(msg.format(num_moves, envscore, infos["max_score"], reward))

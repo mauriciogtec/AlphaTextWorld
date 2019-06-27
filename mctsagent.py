@@ -466,14 +466,14 @@ class MCTSAgent:
             tokens = [get_word_id(w, ents2id) for w in tokens]
             for i in range(1, len(tokens)):
                 nwinputs.append(tokens[:i])
-            nwoutput.append(tokens[i])
+                nwoutput.append(tokens[i])
         maxlen = max([len(t) for t in nwinputs])
         pad = ents2id["<PAD>"]
         nwinputs = [t + [pad] * (maxlen - len(t)) for t in nwinputs]
         inputs['cmdprev_input'] = tf.constant(np.array(nwinputs), tf.int32)
         inputs['ents2id'] = ents2id
 
-        self.nwoutput = nwoutput
+        self.current.nwoutput = nwoutput
 
         return inputs
 
@@ -556,12 +556,19 @@ class MCTSAgent:
 
                     # add record to data
                     feedback_history = node.feedback_history()
-                    inputs = node.inputs
-                    nwoutput = node.nwoutput
+                    inputs = dict()
+                    inputs['cmdlist'] = node.inputs['cmdlist']
+                    inputs['ents2id'] = node.inputs['ents2id']
+                    inputs['memory_input'] = node.inputs['memory_input'].numpy().tolist()
+                    inputs['location_input'] = node.inputs['location_input'].numpy().tolist()
+                    inputs['cmdlist_input'] = node.inputs['cmdlist_input'].numpy().tolist()
+                    inputs['entvocab_input'] = node.inputs['entvocab_input'].numpy().tolist()
+                    inputs['cmdprev_input'] = node.inputs['cmdprev_input'].numpy().tolist()
+                    
                     record = {
                         "cmdlist": cmds_node,
                         "inputs": inputs,
-                        "nwoutput": nwoutput,
+                        "nwoutput": node.nwoutput,
                         "counts": counts_node,
                         "value": node.reward,
                         "feedback_history": feedback_history,

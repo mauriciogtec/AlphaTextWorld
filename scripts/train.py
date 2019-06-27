@@ -63,6 +63,9 @@ embeddings, vocab = load_embeddings(
     embedding_fdim=embedding_dim,
     seed=None,
     vocab=textworld_vocab)
+index = np.random.permutation(range(embedding_dim))[:embedding_fdim]
+embeddings = embeddings[index, :]
+network = nn.AlphaTextWorldNet(embeddings, vocab)
 
 optim = tf.optimizers.Nadam(
     learning_rate=0.00001,
@@ -70,14 +73,15 @@ optim = tf.optimizers.Nadam(
     beta_1=0.9,
     beta_2=0.98)
 
+tstamp = math.trunc(100 * time.time())
+
 # load model if existing
-modelfiles = os.listdir(cwd + "/" + model_dir)
+modelfiles = glob.glob("{}{}*.h5".format(cwd, model_dir))
 if len(modelfiles) > 0:
     fn = max(modelfiles)
     print("Loading weights:", fn)
     network.load_weights(fn)
 else:
-    tstamp = math.trunc(100 * time.time())
     network.save_weights('{}trained_models/{}.h5'.format(cwd, tstamp))
 
 
@@ -140,36 +144,43 @@ def train(model, optim, data_batch):
 num_choice = 50
 num_consider = 10
 all_datafiles = glob.glob("data/*.json")
-datatstamps = [int(x[5:-5]) for x in all_datafiles]
-datatstamps.sort(reverse=True)
-datatstamps = datatstamps[1:num_consider]  # exclude current
+all_datafiles.sort(reverse=True)
+all_datafiles = all_datafiles[1:num_consider]  # exclude current
 
-if len(datatstamps) > num_choice:
+if len(all_datafiles) > num_choice:
     datatstamps = np.random.choice(
-        datatstamps,
+        all_datafiles,
         size=num_choice,
         replace=False)
 
 # extend current data
-for s in datatstamps:
-    datafile = "data/{}.json".format(s)
+data = []
+for datafile in all_datafiles:
+    # datafile = "data/{}.json".format(s)
     print("Adding replay data from:", datafile)
     with open(datafile, 'r') as fn:
         d = ujson.load(fn)
         data.extend(d)
 
-data = data_current
+# data = data_current
 # data = [x for x in data if
 #         sum(x['counts']) > 10 and
 #         len(x['cmdlist']) >= 1]
 
+# order data and obtain value policy and nextwords
 data = np.random.permutation(data)
+inputs_data = [d['inputs'] for d in data]
+value_data = [d['value'] for d in data]
+counts_data = [d['counts'] for d in data]
+nw = [d['cmd'] for d in data]
+
+
 
 ndata = len(data)
-batch_size = int(len(data), 8) if len(data) > 0 else 1
+batch_size = int(min(len(data), 8)) if len(data) > 0 else 1
 print_every = 40 / batch_size
-num_epochs = 2
-num_batches = min(ndata // batch_size, 100)
+num_epochs = 1
+num_batches = ndata // batch_size
 ckpt_every = 160 / batch_size
 num_epochs = 2 if num_batches < 40 else 1
 
@@ -178,11 +189,11 @@ print(msg.format(num_epochs, num_batches, tstamp))
 
 for e in range(num_epochs):
     for b in range(num_batches):
-        data_batch = get_batch(data, b, batch_size)
+        inputs_batch = get_batch(inputs, b, batch_size)
 
         try:
             vloss, ploss, cgloss, rloss, loss = train(
-                memory_batch, cmdlist_batch, value_batch, policy_batch)
+                data_batch, value_batch, policy_batch)
         except Exception as e:
             print(e)
             continue

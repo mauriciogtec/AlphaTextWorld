@@ -19,16 +19,16 @@ parser.add_argument('--gameindex',
                     type=int, default=1,
                     help='Number of games to be played.')
 parser.add_argument('--subtrees',
-                    type=int, default=1,
+                    type=int, default=3,
                     help='Subtrees to spawn.')
 parser.add_argument('--subtree_depth',
-                    type=int, default=5,
+                    type=int, default=3,
                     help='Max depth of search trees.')
 parser.add_argument('--max_steps',
-                    type=int, default=1,
+                    type=int, default=3,
                     help='Max number of steps per game. Defaults to 100.')
 parser.add_argument('--min_time',
-                    type=float, default=60,
+                    type=float, default=10,
                     help=''.join(['Min time playing. If a game ends sooner',
                                   ', it will play another episode.']))
 parser.add_argument('--cwd', default='.',
