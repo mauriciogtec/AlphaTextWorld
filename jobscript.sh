@@ -12,6 +12,7 @@
 
 module load intel/17.0.4
 module load python3/3.6.3
+#pip3 install --user tensorflow==2.0.0-beta1
 pip3 install --user keras h5py==2.8.0
 module load phdf5
 
