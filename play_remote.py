@@ -11,6 +11,7 @@ import time
 import ujson
 import math
 import os
+import h5py
 
 
 tf.config.threading.set_inter_op_parallelism_threads(1)
