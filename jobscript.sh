@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -N 16
+#SBATCH -N 1
 #SBATCH -n 16
 #SBATCH -c 1
 #SBATCH -p development
