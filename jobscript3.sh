@@ -12,7 +12,7 @@
 module load intel/17.0.4
 module load python3/3.6.3
 pip3 install --user keras h5py==2.8.0
-module load hdf5/1.8.16
+module load phdf5
 
 export HDF5_USE_FILE_LOCKING=FALSE
 export MKL_NUM_THREADS=2
