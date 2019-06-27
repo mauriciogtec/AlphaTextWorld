@@ -5,7 +5,7 @@
 #SBATCH --tasks-per-node 16
 #SBATCH -c 1
 #SBATCH -p development
-#SBATCH -J gameplay
+#SBATCH -J gnormal
 #SBATCH -e slurm-%j.err
 #SBATCH -t 0:120:0
 
