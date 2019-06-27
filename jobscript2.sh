@@ -29,6 +29,22 @@ python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --ver
 python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
 python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
 python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 & 
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
+python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
 python3 play_remote2.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0
 wait
 
