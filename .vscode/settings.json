@@ -7,6 +7,9 @@
         "**/.git/subtree-cache/**": true,
         "**/node_modules/*/**": true,
         "*data*/": true,
-        "*games*/": true
+        "*games*/": true,
+        "*ckpt*/": true,
+        "*trained*/": true,
+        "*cache*/": true
     }
 }

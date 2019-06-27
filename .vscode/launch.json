@@ -5,11 +5,52 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Attention",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal"
+            "program": "/home/mauriciogtec/Github/AlphaTextWorld/attention.py",
+            "console": "integratedTerminal",
+            "cwd": "/home/mauriciogtec/Github/AlphaTextWorld/"
+        },
+        {
+            "name": "TextworldNet",
+            "type": "python",
+            "request": "launch",
+            "program": "/home/mauriciogtec/Github/AlphaTextWorld/textworldnet.py",
+            "console": "integratedTerminal",
+            "cwd": "/home/mauriciogtec/Github/AlphaTextWorld/"
+        },
+        {
+            "name": "Play",
+            "type": "python",
+            "request": "launch",
+            "program": "/home/mauriciogtec/Github/AlphaTextWorld/scripts/play.py",
+            "console": "integratedTerminal",
+            "cwd": "/home/mauriciogtec/Github/AlphaTextWorld/"
+        },
+        {
+            "name": "Agent",
+            "type": "python",
+            "request": "launch",
+            "program": "/home/mauriciogtec/Github/AlphaTextWorld/mctsagent.py",
+            "console": "integratedTerminal",
+            "cwd": "/home/mauriciogtec/Github/AlphaTextWorld/"
+        },
+        {
+            "name": "Train",
+            "type": "python",
+            "request": "launch",
+            "program": "/home/mauriciogtec/Github/AlphaTextWorld/scripts/train.py",
+            "console": "integratedTerminal",
+            "cwd": "/home/mauriciogtec/Github/AlphaTextWorld/"
+        },
+        {
+            "name": "textutils",
+            "type": "python",
+            "request": "launch",
+            "program": "/home/mauriciogtec/Github/AlphaTextWorld/textutils.py",
+            "console": "integratedTerminal",
+            "cwd": "/home/mauriciogtec/Github/AlphaTextWorld/"
         }
     ]
 }

@@ -39,9 +39,9 @@ gamefiles = glob.glob("games/*.ulx")
 gamefiles = [gamefiles[i] for i in
              np.random.permutation(range(len(gamefiles)))]
 
-network = nn.load_network(
-    embeddings, vocab,
-    "trained_models/1557898363.h5")
+# network = nn.load_network(
+#     embeddings, vocab,
+#     "trained_models/1557898363.h5")
 
 optim = tf.optimizers.Nadam(
     learning_rate=0.00003,

@@ -6,285 +6,10 @@ from tensorflow.keras import activations,\
     optimizers, utils, layers, models, regularizers, initializers
 import pdb
 import sys
-# sys.path.append("../")
-from textutils import text_to_tensor_list,\
-    text2tensor, load_embeddings, noun_phrases
 import re
-
-
-class LayerNormalization(layers.Layer):
-    def __init__(self, eps=1e-6, **kwargs):
-        super(LayerNormalization, self).__init__(**kwargs)
-        self.eps = eps
-
-    def build(self, input_shape):
-        self.gamma = self.add_weight(
-            name='gamma',
-            shape=input_shape[-1],
-            initializer='ones',
-            trainable=True)
-        self.beta = self.add_weight(
-            name='beta',
-            shape=input_shape[-1],
-            initializer='zeros',
-            trainable=True)
-
-    def call(self, x):
-        mean = tf.math.reduce_mean(x, axis=-1, keepdims=True)
-        std = tf.math.reduce_std(x, axis=-1, keepdims=True)
-        return self.gamma * (x - mean) / (std + self.eps) + self.beta
-
-    def compute_output_shape(self, input_shape):
-        return input_shape
-
-
-class TimePooling(models.Model):
-    def __init__(self, units, dropout=0.1, l2=None, **kwargs):
-        super(TimePooling, self).__init__(**kwargs)
-        self.layer_norm = LayerNormalization()
-        self.dropout = layers.Dropout(dropout)
-        self.att_wts = layers.TimeDistributed(
-            layers.Dense(
-                units=1,
-                kernel_regularizer=regularizers.l2(l2)))
-        self.value_layer = layers.TimeDistributed(
-            layers.Dense(
-                units=units,
-                activation='relu',
-                kernel_regularizer=regularizers.l2(l2)))
-
-    def call(self, inputs, training=False, attentions=False):
-        """
-        inputs
-            inputs: (batch_size x pool_dim x input_dim)
-        returns
-            outputs: (batch_size x output_dim)
-        """
-        logits = self.att_wts(inputs)  # bsize x pdim x 1
-        attn_wts = tf.math.softmax(logits, axis=1)  # bsize x pdim x 1
-        attn_wts = tf.transpose(attn_wts, perm=(0, 2, 1))  # bsize x 1 x pdim
-        values = self.value_layer(inputs)  # bsize x pdim x odim
-        output = tf.matmul(attn_wts, values)  # bsize x 1 x odim
-        output = tf.squeeze(output, axis=1)  # bsize x odim
-        output = self.layer_norm(output)  # bsize x odim
-        if training:
-            output = self.dropout(output)  # bsize x odim
-        return output
-
-
-class IdentityBlock(models.Model):
-    """A residual block part of the encoder, similar to ResNet and AlphaZero"""
-    def __init__(self, filters, kernel_size, l2=None, **kwargs):
-        super(IdentityBlock, self).__init__(**kwargs)
-        self.layer_norm_1 = LayerNormalization()
-        self.relu_1 = layers.Activation('relu')
-        self.conv_1 = layers.Conv1D(
-            filters=filters,
-            kernel_size=kernel_size,
-            padding='same',
-            kernel_regularizer=regularizers.l2(l2))
-        self.layer_norm_2 = layers.LayerNormalization()
-        self.relu_2 = layers.Activation('relu')
-        self.conv_2 = layers.Conv1D(
-            filters=filters,
-            kernel_size=kernel_size,
-            padding='same',
-            kernel_regularizer=regularizers.l2(l2))
-        self.add_layer = layers.Add()
-
-    def call(self, inputs):
-        x = self.layer_norm_1(inputs)
-        x = self.relu_1(x)
-        x = self.conv_1(x)
-        x = self.layer_norm_2(x)
-        x = self.relu_2(x)
-        x = self.conv_2(x)
-        x = self.add_layer([x, inputs])
-        return x
-
-
-class LocalFeaturesExtractor(models.Model):
-    """Transforms text to memory and output vectors"""
-    def __init__(self, filters, kernel_size,
-                 num_blocks, l2=None, **kwargs):
-        super(LocalFeaturesExtractor, self).__init__(**kwargs)
-        self.layer_norm_1 = LayerNormalization()
-        self.relu_1 = layers.Activation('relu')
-        self.conv_1 = layers.Conv1D(
-            filters=filters,
-            kernel_size=1,
-            padding='same',
-            kernel_regularizer=regularizers.l2(l2))
-        self.blocks = [
-            IdentityBlock(
-                filters=filters,
-                kernel_size=3,
-                l2=l2)
-            for i in range(num_blocks)]
-
-    def call(self, inputs):
-        x = self.layer_norm_1(inputs)
-        x = self.relu_1(x)
-        x = self.conv_1(x)
-        for block in self.blocks:
-            x = block(x)
-        return x
-
-
-class ScaledDotProductAttention(models.Model):
-    def __init__(self, dropout=0.1, **kwargs):
-        super(ScaledDotProductAttention, self).__init__(**kwargs)
-        self.dropout = layers.Dropout(dropout)
-
-    def call(self, queries, keys, values, mask=None,
-             training=False, attentions=False):
-        """
-        inputs
-            queries: (queries_size x pool_dim)
-            keys: (keys_size x pool_dim)
-            values: (keys_size x output_dim)
-        returns
-            output: (queries_size x output_dim)
-        """
-        attn = tf.matmul(queries, keys, transpose_b=True)  # qsize x ksize
-        attn /= np.sqrt(keys.shape[-1])
-        if mask is not None:
-            attn += mask
-        attn = tf.math.softmax(attn, axis=1)  # qsize x ksize
-        if training:
-            attn = self.dropout(attn)
-        output = tf.matmul(attn, values)  # qsize x odim
-
-        return output
-
-
-class MultiHeadAttention(models.Model):
-    def __init__(self, units, num_heads, residual=False,
-                 l2=None, dropout=0.1, **kwargs):
-        super(MultiHeadAttention, self).__init__(**kwargs)
-        self.num_heads = num_heads
-        self.units_per_head = units // num_heads
-        self.residual = residual
-
-        self.qs_layers = []
-        self.ks_layers = []
-        self.vs_layers = []
-
-        for _ in range(num_heads):
-            self.qs_layers.append(
-                layers.Dense(
-                    self.units_per_head,
-                    use_bias=False,
-                    kernel_regularizer=regularizers.l2(l2)))
-            self.ks_layers.append(
-                layers.Dense(
-                    self.units_per_head,
-                    use_bias=False,
-                    kernel_regularizer=regularizers.l2(l2)))
-            self.vs_layers.append(
-                layers.Dense(
-                    use_bias=False,
-                    units=self.units_per_head,
-                    kernel_regularizer=regularizers.l2(l2)))
-
-        self.attention = ScaledDotProductAttention(dropout=dropout)
-        self.dense = layers.Dense(
-            units,
-            activation="relu",
-            kernel_regularizer=regularizers.l2(l2))
-        self.dropout = layers.Dropout(dropout)
-        self.layernorm = LayerNormalization()
-
-    def call(self, queries, keys=None, training=False):
-        """
-        inputs
-            queries: (queries_size x queries_dim)
-            keys: (keys_size x keys_dim)
-        returns
-            output: (queries_size x output_dim)
-        """
-        heads = []
-        if keys is None:
-            keys = queries
-
-        for i in range(self.num_heads):
-            Q = self.qs_layers[i](queries)  # qsize x hdim
-            K = self.ks_layers[i](keys)  # ksize x hdim
-            V = self.vs_layers[i](keys)  # ksize x hdim
-            head = self.attention(Q, K, V, training=training)  # qsize x hdim
-            heads.append(head)
-
-        output = tf.concat(heads, axis=1)  # qsize x units
-        output = self.dense(output)  # qsize x units
-        if training:
-            output = self.dropout(output)
-        if self.residual:
-            output += queries
-        output = self.layernorm(output)
-        return output
-
-
-class AttentionEncoder(models.Model):
-    """Transforms text to memory and output vectors"""
-    def __init__(self, units, num_heads, num_blocks,
-                 residual=True, l2=None, **kwargs):
-        #
-        super(AttentionEncoder, self).__init__(**kwargs)
-        self.residual = residual
-        #  note: units here shouldnt be free parameter, its always like input
-        self.blocks = [
-            MultiHeadAttention(
-                units=units,
-                num_heads=num_heads,
-                residual=self.residual,
-                l2=l2)
-            for i in range(num_blocks)]
-
-    def call(self, queries, keys=None, training=False):
-        """
-        inputs
-            queries: (queries_size x queries_dim)
-            keys: (keys_size x keys_dim)
-        returns
-            output: (queries_size x queries_dim)
-        """
-        x = queries
-        for block in self.blocks:
-            x = block(x, keys, training=training)
-        return x
-
-
-class DenseHead(models.Model):
-    """Trained to predict a singlue value"""
-    def __init__(self, hidden_units,
-                 residual=False, dropout=0.25, l2=None, **kwargs):
-        super(DenseHead, self).__init__(**kwargs)
-        self.dense_1 = layers.Dense(
-            units=hidden_units,
-            kernel_regularizer=regularizers.l2(l2),
-            activation='relu')
-        self.dropout = layers.Dropout(dropout)
-        self.dense_2 = layers.Dense(
-            units=1,
-            kernel_regularizer=regularizers.l2(l2))
-        self.residual = residual
-
-    def call(self, inputs, training=None):
-        """
-        inputs
-            inputs: (inputs_size x input_dim)
-        returns
-            output: (inputs_size)
-        """
-        x = inputs
-        x = self.dense_1(x)  # isize x hdim
-        if training:
-            x = self.dropout(x)
-        if self.residual:
-            x += inputs
-        x = self.dense_2(x)  # isize x 1
-        x = tf.squeeze(x, axis=1)  # isize
-        return x
+from collections import deque
+from custom_layers import *
+from textutils import *
 
 
 class AlphaTextWorldNet(models.Model):
@@ -296,15 +21,18 @@ class AlphaTextWorldNet(models.Model):
     HIDDEN_UNITS = 64
     ATT_HEADS = 4
     POSFREQS = 16
+    MAX_CMD_LEN = 6
 
     def __init__(self,  embeddings, vocab, **kwargs):
         super(AlphaTextWorldNet, self).__init__(**kwargs)
 
+        self.vocab = vocab
         self.word2id = {w: i for i, w in enumerate(vocab)}
         self.id2word = {i: w for i, w in self.word2id.items()}
-        self.verbs = ["take", "cook", "go", "open",
+        self.verbs = ["take", "cook", "go", "open", "drop",
                       "eat", "prepare", "examine", "chop", "dice"]
         self.adverbs = ["with", "from"]
+        self.unnecessary_words = ['a', 'an', 'the']
 
         embedding_dim, vocab_size = embeddings.shape
         self.embeddings = layers.Embedding(
@@ -317,30 +45,34 @@ class AlphaTextWorldNet(models.Model):
         self.lfe_memory = LocalFeaturesExtractor(
             filters=self.HIDDEN_UNITS,
             kernel_size=self.KSIZE,
-            num_blocks=3,
+            num_blocks=2,
             l2=self.REG_PENALTY)
 
         self.lfe_cmdlist = LocalFeaturesExtractor(
             filters=self.HIDDEN_UNITS,
             kernel_size=self.KSIZE,
-            num_blocks=2,
+            num_blocks=1,
             l2=self.REG_PENALTY)
 
-        self.tp_time_memory = TimePooling(
-            units=self.HIDDEN_UNITS,
-            l2=self.REG_PENALTY)
-
-        self.tp_turn_memory = TimePooling(
-            units=self.HIDDEN_UNITS,
-            l2=self.REG_PENALTY)
-
-        self.att_memory_cmdlist_inner = AttentionEncoder(
+        self.att_memory_loc_time = AttentionEncoder(
             units=self.HIDDEN_UNITS,
             num_heads=self.ATT_HEADS,
             num_blocks=1,
             l2=self.REG_PENALTY)
 
-        self.att_memory_cmdlist_outer = AttentionEncoder(
+        self.att_memory_loc_turn = PairedAttentionEncoder(
+            units=self.HIDDEN_UNITS,
+            num_heads=self.ATT_HEADS,
+            num_blocks=1,
+            l2=self.REG_PENALTY)
+
+        self.att_memory_cmdlist_time = AttentionEncoder(
+            units=self.HIDDEN_UNITS,
+            num_heads=self.ATT_HEADS,
+            num_blocks=1,
+            l2=self.REG_PENALTY)
+
+        self.att_memory_cmdlist_turn = PairedAttentionEncoder(
             units=self.HIDDEN_UNITS,
             num_heads=self.ATT_HEADS,
             num_blocks=1,
@@ -351,10 +83,24 @@ class AlphaTextWorldNet(models.Model):
             l2=self.REG_PENALTY)
 
         self.policy_head = DenseHead(
-            hidden_units=self.HIDDEN_UNITS + self.POSFREQS,
-            dropout=0.5,
-            l2=self.REG_PENALTY,
-            name="policy_head")
+            hidden_units=self.HIDDEN_UNITS,
+            l2=self.REG_PENALTY)
+
+        self.cmd_gen_head = DenseHead(
+            hidden_units=self.HIDDEN_UNITS,
+            l2=self.REG_PENALTY)
+
+        self.att_cmd_gen_mem = AttentionEncoder(
+            units=self.HIDDEN_UNITS,
+            num_heads=self.ATT_HEADS,
+            num_blocks=1,
+            l2=self.REG_PENALTY)
+
+        self.att_cmd_gen_prev = AttentionEncoder(
+            units=self.HIDDEN_UNITS,
+            num_heads=self.ATT_HEADS,
+            num_blocks=1,
+            l2=self.REG_PENALTY)
 
     def position_encodings(self, depth, freqs):
         ans = []
@@ -384,55 +130,124 @@ class AlphaTextWorldNet(models.Model):
             i -= 1
         return 'unknown'
 
+    def split_from_cmd_template(self, cmd):
+        words = [x for x in cmd.split() if x not in self.unnecessary_words]
+        template = [words[0]]
+        i = 1
+        s = words[1]
+        while i < len(words) - 1:
+            if words[i + 1] not in self.adverbs:
+                s += ' ' + words[i + 1]
+                i += 1
+            else:
+                template.append(s)
+                template.append(words[i + 1])
+                s = words[i + 2]
+                i += 2
+        template.append(s)
+        return template
+
     # @tf.function # faster eval slower backprop
-    def call(self, inputs, training=False, cmd_vocab=None):
-        memory, cmdlist = inputs
+    def call(self, inputs, training=False):
+        memory = inputs['memory_input']
+        cmdlist = inputs['cmdlist_input']
+        location = inputs['location_input']
+
+        if training:
+            entvocab = inputs['entvocab_input']
+            cmdprev = inputs['cmdprev_input']
 
         # obtain embeddings and self-encode commands amd memory
-        memx = self.encode_text(memory)
-        cmdx = self.encode_text(cmdlist)
+        memx = self.embeddings(memory)
+        cmdx = self.embeddings(cmdlist)
+        locx = self.embeddings(location)
+
+        if training:
+            vocabx = self.embeddings(entvocab)
+            cmdprevx = self.embeddings(cmdprev)
 
         M = memx.shape[0]
         C = cmdx.shape[0]
 
         memx = self.lfe_memory(memx)  # M x T x dim
         cmdx = self.lfe_cmdlist(cmdx)  # C x Tc x dim
-        queryx = tf.math.reduce_sum(cmdx, axis=1) / tf.di  # C x dim
+        queryx = tf.math.reduce_sum(cmdx, axis=1)  # C x dim
 
         # 1. pipeline for value prediction
-        x = self.tp_time_memory(memx, training=training)  # M x dim
+        memtpx = self.att_memory_loc_time(
+            locx, memx, training=training)  # M x 1 x dim
+        memtpx = tf.squeeze(memtpx, axis=1)  # M X dim
         posx = self.position_encodings(M, self.POSFREQS)  # M x pfreq
-        x = tf.concat([x, posx], axis=1)  # M x (dim + posfreq)
-        x = tf.expand_dims(x, axis=0)  # 1 X M x (dim + posfreq)
-        x = self.tp_turn_memory(x, training=training)  # 1 x (dim + posfreq)
-        value = self.value_head(x, training=training)  # (1)
+        memtpx = tf.concat([memtpx, posx], axis=1)  # M x (dim + posfreq)
+        memtpx = tf.expand_dims(memtpx, axis=0)  # 1 x M x (dim + posfreq)
+        x = self.att_memory_loc_turn(
+            locx, memtpx, training=training)  # 1 x (dim)
+        x += locx  # 1 x dim
+        value = self.value_head(x, training=training)  # 1
+        value = tf.squeeze(value)  # ()
 
         # 2. pipeline for action value prediction
-        z = [memx[t, :, :] for t in range(M)]  # M x [T x dim]
-        z = [self.att_memory_cmdlist_inner(queryx, x, training=training)
-             for x in z]  # M x [C x dim]
-        posx = self.position_encodings(C, self.POSFREQS)  # C x pfreq
-        z = [tf.concat([x, posx], axis=1) for x in z]  # M x [C x (dim + pfrq)]
-        z = tf.stack(z, axis=1)  # C x M x (dim + pfreq)
-        z = [z[t, :, :] for t in range(C)]  # C x [M x (dim + pfreq)]
-        y = [queryx[None, t, :] for t in range(C)]  # C x [1 x dim]
-        z = [self.att_memory_cmdlist_outer(queryxrow, x, training=training)
-             for x, queryxrow in zip(z, y)]  # C x [1 x dim]
-        z = tf.concat(z, axis=0)  # C x dim
-        policy_logits = self.policy_head(z, training=training)  # (C)
+        x = self.att_memory_cmdlist_time(
+            queryx, memx, training=training)  # M x C x dim
+        x = tf.transpose(x, perm=(1, 0, 2))  # C X M X dim
+        posx = self.position_encodings(M, self.POSFREQS)  # M x pfreq
+        posx = tf.stack([posx] * C, axis=0)  # C x M x posfreq
+        x = tf.concat([x, posx], axis=-1)  # C x M x (dim + pfrq)
+        x = self.att_memory_cmdlist_turn(
+            queryx, x, training=training)  # C x dim
+        x += locx  # C x dim
+        policy_logits = self.policy_head(x, training=training)  # (C)
+
+        output = {'value': value, 'policy_logits': policy_logits}
 
         # 3. pipeline for command prediction
-        # -- A. obtain vocabulary and location
-        if cmd_vocab is None:
-            cmd_vocab = noun_phrases(memory) +\
-                self.verbs + self.adverbs + ["</S>"]
-            vocabx = self.encode_text(cmd_vocab)
-            vocabx = tf.math.reduce_sum(vocabx)  # V x dim
-        location = self.get_location(memory)
-        # -- B predict the verb
-        
+        if training:
+            # -- A. obtain vocabulary, location, and memory context
+            cmdvocab = ["<PAD>", "<UNK>", "<S>", "</S>"] +\
+                 self.verbs + self.adverbs + noun_phrases(memory)
+            cmdvocab2id = {x: i for i, x in enumerate(cmdvocab)}
+            V = len(cmdvocab)
+            vocabx = self.encode_text(cmdvocab)
+            vocabx = tf.math.reduce_sum(vocabx, axis=1)  # V x dim
 
-        return value, policy_logits
+            memvocabx = self.att_cmd_gen_mem(
+                vocabx, memtpx, training=training)  # 1 x V x dim
+            memvocabx = tf.squeeze(memvocabx, axis=0)  # V x dim
+
+            # -- B. sequential decoding in teacher mode
+            cmds_deque = deque(cmdlist)
+            cmd = cmds_deque.popleft()
+            nextword_logits = []
+            nextword_tokens = []
+            while len(cmds_deque) > 0:
+                cmd_comps = self.split_from_cmd_template(cmd) + ['</S>']
+                cmd_tokens = [get_word_id(x, cmdvocab2id) for x in cmd_comps]
+                sentence_x = []  # (ntokens + 1) x [dim]
+                logits = []  # (ntokens) x [V]
+                for phrase in (['<S>'] + cmd_comps):
+                    x = self.encode_text([phrase])
+                    x = tf.squeeze(tf.reduce_sum(x, axis=1))  # dim
+                    sentence_x.append(x)
+                for i in range(len(cmd_comps)):
+                    prevx = sentence_x[:(i + 1)]
+                    prevx = tf.stack(prevx, axis=0)  # nprev x dim
+                    prevx = tf.expand_dims(prevx, axis=0)  # 1 x V x dim
+                    prevx = self.att_cmd_gen_prev(
+                        vocabx, prevx, training=training)  # 1 x V x dim
+                    prevx = tf.squeeze(prevx, axis=0)  # V x dim
+                    x = memvocabx + prevx + locx + sentence_x[-1]  # V x dm
+                    x = self.cmd_gen_head(x)  # (V)
+                    logits.append(x)
+                logits = tf.stack(logits, axis=0)  # toks X V
+                nextword_logits.append(logits)  # C x [toks(c) X V]
+                nextword_tokens.append(cmd_tokens)  # C x [toks(c)]
+                cmd = cmds_deque.pop()
+
+            output['nextword_logits'] = nextword_logits
+            output['nextword_tokens'] = nextword_tokens
+            output['cmdvocab'] = cmdvocab
+
+        return output
 
 
 def load_network(embeddings, vocab, path_to_weights):
@@ -471,5 +286,282 @@ if __name__ == "__main__":
     cmdlist = ['cook chicken leg with oven', 'cook chicken leg with stove', 'cook chicken wing with oven', 'cook chicken wing with stove', 'eat chicken wing', 'go east', 'go north', 'go south', 'go west', 'prepare meal', 'take cookbook from counter', 'take knife from counter']
 
     training = True
-    initrun = model((memory, cmdlist), training=training)
+    inputs = {'memory': memory, 'cmdlist': cmdlist}
+    initrun = model(inputs, training=training)
     print(0)
+
+
+# OLD CODE
+# class LayerNormalization(layers.Layer):
+#     def __init__(self, eps=1e-6, **kwargs):
+#         super(LayerNormalization, self).__init__(**kwargs)
+#         self.eps = eps
+
+#     def build(self, input_shape):
+#         self.gamma = self.add_weight(
+#             name='gamma',
+#             shape=input_shape[-1],
+#             initializer='ones',
+#             trainable=True)
+#         self.beta = self.add_weight(
+#             name='beta',
+#             shape=input_shape[-1],
+#             initializer='zeros',
+#             trainable=True)
+
+#     def call(self, x):
+#         mean = tf.math.reduce_mean(x, axis=-1, keepdims=True)
+#         std = tf.math.reduce_std(x, axis=-1, keepdims=True)
+#         return self.gamma * (x - mean) / (std + self.eps) + self.beta
+
+#     def compute_output_shape(self, input_shape):
+#         return input_shape
+
+
+# class TimePooling(models.Model):
+#     def __init__(self, units, dropout=0.1, l2=None, **kwargs):
+#         super(TimePooling, self).__init__(**kwargs)
+#         self.layer_norm = LayerNormalization()
+#         self.dropout = layers.Dropout(dropout)
+#         self.att_wts = layers.TimeDistributed(
+#             layers.Dense(
+#                 units=1,
+#                 kernel_regularizer=regularizers.l2(l2)))
+#         self.value_layer = layers.TimeDistributed(
+#             layers.Dense(
+#                 units=units,
+#                 activation='relu',
+#                 kernel_regularizer=regularizers.l2(l2)))
+
+#     def call(self, inputs, training=False, attentions=False):
+#         """
+#         inputs
+#             inputs: (batch_size x pool_dim x input_dim)
+#         returns
+#             outputs: (batch_size x output_dim)
+#         """
+#         logits = self.att_wts(inputs)  # bsize x pdim x 1
+#         attn_wts = tf.math.softmax(logits, axis=1)  # bsize x pdim x 1
+#         attn_wts = tf.transpose(attn_wts, perm=(0, 2, 1))  # bsize x 1 x pdim
+#         values = self.value_layer(inputs)  # bsize x pdim x odim
+#         output = tf.matmul(attn_wts, values)  # bsize x 1 x odim
+#         output = tf.squeeze(output, axis=1)  # bsize x odim
+#         output = self.layer_norm(output)  # bsize x odim
+#         if training:
+#             output = self.dropout(output)  # bsize x odim
+#         return output
+
+
+# class IdentityBlock(models.Model):
+#     """A residual block part of the encoder, similar to ResNet and AlphaZero"""
+#     def __init__(self, filters, kernel_size, l2=None, **kwargs):
+#         super(IdentityBlock, self).__init__(**kwargs)
+#         self.layer_norm_1 = LayerNormalization()
+#         self.relu_1 = layers.Activation('relu')
+#         self.conv_1 = layers.Conv1D(
+#             filters=filters,
+#             kernel_size=kernel_size,
+#             padding='same',
+#             kernel_regularizer=regularizers.l2(l2))
+#         self.layer_norm_2 = layers.LayerNormalization()
+#         self.relu_2 = layers.Activation('relu')
+#         self.conv_2 = layers.Conv1D(
+#             filters=filters,
+#             kernel_size=kernel_size,
+#             padding='same',
+#             kernel_regularizer=regularizers.l2(l2))
+#         self.add_layer = layers.Add()
+
+#     def call(self, inputs):
+#         x = self.layer_norm_1(inputs)
+#         x = self.relu_1(x)
+#         x = self.conv_1(x)
+#         x = self.layer_norm_2(x)
+#         x = self.relu_2(x)
+#         x = self.conv_2(x)
+#         x = self.add_layer([x, inputs])
+#         return x
+
+
+# class LocalFeaturesExtractor(models.Model):
+#     """Transforms text to memory and output vectors"""
+#     def __init__(self, filters, kernel_size,
+#                  num_blocks, l2=None, **kwargs):
+#         super(LocalFeaturesExtractor, self).__init__(**kwargs)
+#         self.layer_norm_1 = LayerNormalization()
+#         self.relu_1 = layers.Activation('relu')
+#         self.conv_1 = layers.Conv1D(
+#             filters=filters,
+#             kernel_size=1,
+#             padding='same',
+#             kernel_regularizer=regularizers.l2(l2))
+#         self.blocks = [
+#             IdentityBlock(
+#                 filters=filters,
+#                 kernel_size=3,
+#                 l2=l2)
+#             for i in range(num_blocks)]
+
+#     def call(self, inputs):
+#         x = self.layer_norm_1(inputs)
+#         x = self.relu_1(x)
+#         x = self.conv_1(x)
+#         for block in self.blocks:
+#             x = block(x)
+#         return x
+
+
+# class ScaledDotProductAttention(models.Model):
+#     def __init__(self, dropout=0.1, **kwargs):
+#         super(ScaledDotProductAttention, self).__init__(**kwargs)
+#         self.dropout = layers.Dropout(dropout)
+
+#     def call(self, queries, keys, values, mask=None,
+#              training=False, attentions=False):
+#         """
+#         inputs
+#             queries: (queries_size x pool_dim)
+#             keys: (keys_size x pool_dim)
+#             values: (keys_size x output_dim)
+#         returns
+#             output: (queries_size x output_dim)
+#         """
+#         attn = tf.matmul(queries, keys, transpose_b=True)  # qsize x ksize
+#         attn /= np.sqrt(keys.shape[-1])
+#         if mask is not None:
+#             attn += mask
+#         attn = tf.math.softmax(attn, axis=1)  # qsize x ksize
+#         if training:
+#             attn = self.dropout(attn)
+#         output = tf.matmul(attn, values)  # qsize x odim
+
+#         return output
+
+
+# class MultiHeadAttention(models.Model):
+#     def __init__(self, units, num_heads, residual=False,
+#                  l2=None, dropout=0.1, **kwargs):
+#         super(MultiHeadAttention, self).__init__(**kwargs)
+#         self.num_heads = num_heads
+#         self.units_per_head = units // num_heads
+#         self.residual = residual
+
+#         self.qs_layers = []
+#         self.ks_layers = []
+#         self.vs_layers = []
+
+#         for _ in range(num_heads):
+#             self.qs_layers.append(
+#                 layers.Dense(
+#                     self.units_per_head,
+#                     use_bias=False,
+#                     kernel_regularizer=regularizers.l2(l2)))
+#             self.ks_layers.append(
+#                 layers.Dense(
+#                     self.units_per_head,
+#                     use_bias=False,
+#                     kernel_regularizer=regularizers.l2(l2)))
+#             self.vs_layers.append(
+#                 layers.Dense(
+#                     use_bias=False,
+#                     units=self.units_per_head,
+#                     kernel_regularizer=regularizers.l2(l2)))
+
+#         self.attention = ScaledDotProductAttention(dropout=dropout)
+#         self.dense = layers.Dense(
+#             units,
+#             activation="relu",
+#             kernel_regularizer=regularizers.l2(l2))
+#         self.dropout = layers.Dropout(dropout)
+#         self.layernorm = LayerNormalization()
+
+#     def call(self, queries, keys=None, training=False):
+#         """
+#         inputs
+#             queries: (queries_size x queries_dim)
+#             keys: (keys_size x keys_dim)
+#         returns
+#             output: (queries_size x output_dim)
+#         """
+#         heads = []
+#         if keys is None:
+#             keys = queries
+
+#         for i in range(self.num_heads):
+#             Q = self.qs_layers[i](queries)  # qsize x hdim
+#             K = self.ks_layers[i](keys)  # ksize x hdim
+#             V = self.vs_layers[i](keys)  # ksize x hdim
+#             head = self.attention(Q, K, V, training=training)  # qsize x hdim
+#             heads.append(head)
+
+#         output = tf.concat(heads, axis=1)  # qsize x units
+#         output = self.dense(output)  # qsize x units
+#         if training:
+#             output = self.dropout(output)
+#         if self.residual:
+#             output += queries
+#         output = self.layernorm(output)
+#         return output
+
+
+# class AttentionEncoder(models.Model):
+#     """Transforms text to memory and output vectors"""
+#     def __init__(self, units, num_heads, num_blocks,
+#                  residual=True, l2=None, **kwargs):
+#         #
+#         super(AttentionEncoder, self).__init__(**kwargs)
+#         self.residual = residual
+#         #  note: units here shouldnt be free parameter, its always like input
+#         self.blocks = [
+#             MultiHeadAttention(
+#                 units=units,
+#                 num_heads=num_heads,
+#                 residual=self.residual,
+#                 l2=l2)
+#             for i in range(num_blocks)]
+
+#     def call(self, queries, keys=None, training=False):
+#         """
+#         inputs
+#             queries: (queries_size x queries_dim)
+#             keys: (keys_size x keys_dim)
+#         returns
+#             output: (queries_size x queries_dim)
+#         """
+#         x = queries
+#         for block in self.blocks:
+#             x = block(x, keys, training=training)
+#         return x
+
+
+# class DenseHead(models.Model):
+#     """Trained to predict a singlue value"""
+#     def __init__(self, hidden_units,
+#                  residual=False, dropout=0.25, l2=None, **kwargs):
+#         super(DenseHead, self).__init__(**kwargs)
+#         self.dense_1 = layers.Dense(
+#             units=hidden_units,
+#             kernel_regularizer=regularizers.l2(l2),
+#             activation='relu')
+#         self.dropout = layers.Dropout(dropout)
+#         self.dense_2 = layers.Dense(
+#             units=1,
+#             kernel_regularizer=regularizers.l2(l2))
+#         self.residual = residual
+
+#     def call(self, inputs, training=None):
+#         """
+#         inputs
+#             inputs: (inputs_size x input_dim)
+#         returns
+#             output: (inputs_size)
+#         """
+#         x = inputs
+#         x = self.dense_1(x)  # isize x hdim
+#         if training:
+#             x = self.dropout(x)
+#         if self.residual:
+#             x += inputs
+#         x = self.dense_2(x)  # isize x 1
+#         x = tf.squeeze(x, axis=1)  # isize
+#         return x

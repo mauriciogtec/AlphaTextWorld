@@ -1,7 +1,7 @@
 .vs_code/
 .code-workspace
 __pycache__/
-trained_models/
+data_*/
 *games*/
 *data*/
-ckpts/
+ckpts*/
