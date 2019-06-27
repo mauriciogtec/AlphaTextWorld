@@ -151,6 +151,7 @@ class MultiHeadAttention(models.Model):
         self.dense = layers.TimeDistributed(
             layers.Dense(
                 units,
+                use_bias=False,
                 activation="relu",
                 kernel_regularizer=regularizers.l2(l2)))
         # self.dropout = layers.Dropout(dropout)

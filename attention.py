@@ -165,7 +165,7 @@ class AlphaTextWorldNet(models.Model):
 
         if training:
             vocabx = self.embeddings(entvocab)
-            cmdprevx = self.embeddings(cmdprev)
+            prevx = self.embeddings(cmdprev)
 
         M = memx.shape[0]
         C = cmdx.shape[0]
@@ -204,11 +204,12 @@ class AlphaTextWorldNet(models.Model):
         # 3. pipeline for command prediction
         if training:
             # -- A. obtain vocabulary, location, and memory context
-            cmdvocab = ["<PAD>", "<UNK>", "<S>", "</S>"] +\
-                 self.verbs + self.adverbs + noun_phrases(memory)
-            cmdvocab2id = {x: i for i, x in enumerate(cmdvocab)}
-            V = len(cmdvocab)
-            vocabx = self.encode_text(cmdvocab)
+            # cmdvocab = ["<PAD>", "<UNK>", "<S>", "</S>"] +\
+            #      self.verbs + self.adverbs + noun_phrases(memory)
+            # cmdvocab2id = {x: i for i, x in enumerate(cmdvocab)}
+            cmdvocab2id = ents2id
+            V = len(cmdvocab2id)
+            # vocabx = self.encode_text(cmdvocab)
             vocabx = tf.math.reduce_sum(vocabx, axis=1)  # V x dim
 
             memvocabx = self.att_cmd_gen_mem(
@@ -216,37 +217,44 @@ class AlphaTextWorldNet(models.Model):
             memvocabx = tf.squeeze(memvocabx, axis=0)  # V x dim
 
             # -- B. sequential decoding in teacher mode
-            cmds_deque = deque(cmdlist)
-            cmd = cmds_deque.popleft()
-            nextword_logits = []
-            nextword_tokens = []
-            while len(cmds_deque) > 0:
-                cmd_comps = self.split_from_cmd_template(cmd) + ['</S>']
-                cmd_tokens = [get_word_id(x, cmdvocab2id) for x in cmd_comps]
-                sentence_x = []  # (ntokens + 1) x [dim]
-                logits = []  # (ntokens) x [V]
-                for phrase in (['<S>'] + cmd_comps):
-                    x = self.encode_text([phrase])
-                    x = tf.squeeze(tf.reduce_sum(x, axis=1))  # dim
-                    sentence_x.append(x)
-                for i in range(len(cmd_comps)):
-                    prevx = sentence_x[:(i + 1)]
-                    prevx = tf.stack(prevx, axis=0)  # nprev x dim
-                    prevx = tf.expand_dims(prevx, axis=0)  # 1 x V x dim
-                    prevx = self.att_cmd_gen_prev(
-                        vocabx, prevx, training=training)  # 1 x V x dim
-                    prevx = tf.squeeze(prevx, axis=0)  # V x dim
-                    x = memvocabx + prevx + locx + sentence_x[-1]  # V x dm
-                    x = self.cmd_gen_head(x)  # (V)
-                    logits.append(x)
-                logits = tf.stack(logits, axis=0)  # toks X V
-                nextword_logits.append(logits)  # C x [toks(c) X V]
-                nextword_tokens.append(cmd_tokens)  # C x [toks(c)]
-                cmd = cmds_deque.pop()
+            # cmds_deque = deque(cmdlist)
+            # cmd = cmds_deque.popleft()
+            # nextword_logits = []
+            prevx = self.att_cmd_gen_prev(
+                vocabx, prevx, training=training)  # NPC X V X D
+            prevx += locx + memvocabx
+            prevx = tf.reshape(prevx, (-1, self.HIDDEN_UNITS))
+            prevx = self.cmd_gen_head(prevx, training=training) # (NPC*N) x D
+            nextword_logits = tf.reshape(prevx, (-1, V)) # NPC x V
+            
+            # nextword_tokens = []
+            # while len(cmds_deque) > 0:
+            #     cmd_comps = self.split_from_cmd_template(cmd) + ['</S>']
+            #     cmd_tokens = [get_word_id(x, cmdvocab2id) for x in cmd_comps]
+            #     sentence_x = []  # (ntokens + 1) x [dim]
+            #     logits = []  # (ntokens) x [V]
+            #     for phrase in (['<S>'] + cmd_comps):
+            #         x = self.encode_text([phrase])
+            #         x = tf.squeeze(tf.reduce_sum(x, axis=1))  # dim
+            #         sentence_x.append(x)
+            #     for i in range(len(cmd_comps)):
+            #         prevx = sentence_x[:(i + 1)]
+            #         prevx = tf.stack(prevx, axis=0)  # nprev x dim
+            #         prevx = tf.expand_dims(prevx, axis=0)  # 1 x V x dim
+            #         prevx = self.att_cmd_gen_prev(
+            #             vocabx, prevx, training=training)  # 1 x V x dim
+            #         prevx = tf.squeeze(prevx, axis=0)  # V x dim
+            #         x = memvocabx + prevx + locx + sentence_x[-1]  # V x dm
+            #         x = self.cmd_gen_head(x)  # (V)
+            #         logits.append(x)
+            # logits = tf.stack(logits, axis=0)  # toks X V
+            # nextword_logits.append(logits)  # C x [toks(c) X V]
+            # nextword_tokens.append(cmd_tokens)  # C x [toks(c)]
+            # cmd = cmds_deque.pop()
 
             output['nextword_logits'] = nextword_logits
-            output['nextword_tokens'] = nextword_tokens
-            output['cmdvocab'] = cmdvocab
+            # output['nextword_tokens'] = nextword_tokens
+            # output['cmdvocab'] = cmdvocab
 
         return output
 

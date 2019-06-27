@@ -98,12 +98,18 @@ def train(model, optim, data_batch):
     counts_batch = [d['counts'] for d in data]
     policy_batch = [np.array(x) / sum(x) for x in counts_batch]
     policy_batch = [0.98 * p + 0.02 / len(p) for p in policy_batch]
-    nwoutput_batch = [d['nwoutput'] for d in data_batch]
+
+    
+    # nwoutput_batch = [d['nwoutput'] for d in data_batch]  # buggy
 
     value_loss, policy_loss, cmdgen_loss, reg_loss = 0, 0, 0, 0
     with tf.GradientTape() as tape:
         for i in range(batch_size):
             x = inputs_batch[i]
+            value = value_batch[i]
+            policy = policy_batch[i]
+            cmds = cmdlist_batch[i]
+
             cmdlist_input = tf.constant(x['cmdlist_input'], tf.int32)
             memory_input = tf.constant(x['memory_input'], tf.int32)
             cmdprev_input = tf.constant(x['cmdprev_input'], tf.int32)
@@ -117,26 +123,49 @@ def train(model, optim, data_batch):
                       'cmdlist_input': cmdlist_input,
                       'entvocab_input': entvocab_input,
                       'cmdprev_input': cmdprev_input,
-                      'location_input': location_input}
+                      'location_input': location_input,
+                      'ents2id': x['ents2id']}
             output = model(inputs, training=True)
             # value loss
             vhat = output['value']
-            value_loss += tf.reduce_sum(tf.square(value - vhat))
+            value_loss += tf.square(value - vhat)
             # policy loss
             plogits = output['policy_logits']
             phat = tf.math.softmax(plogits)
             logphat = tf.math.log(phat + 1e-12)
             policy_loss += - tf.reduce_sum(logphat * policy)
             # cmd generation loss
-            cmdvocab = output['cmdvocab']
-            nwtoks = output['nextword_tokens']
+            # cmdvocab = output['cmdvocab']
+            # nwtoks = output['nextword_tokens']
+            # nwlogits = output['nextword_logits']
+            # for t, l in zip(nwtoks, nwlogits):
+            #     t = tf.one_hot(t, depth=len(cmdvocab))
+            #     p = tf.math.softmax(l, axis=1)
+            #     logp = tf.math.log(p + 1e-12)
+            #     cmdgen_loss += - tf.reduce_sum(logp * t) / len(cmdlist)
+            # find next entities
+            ents2id = x['ents2id']
+            pad, stend = ents2id['<PAD>'], ents2id['</S>']
             nwlogits = output['nextword_logits']
-            for t, l in zip(nwtoks, nwlogits):
-                t = tf.one_hot(t, depth=len(cmdvocab))
-                p = tf.math.softmax(l, axis=1)
-                logp = tf.math.log(p + 1e-12)
-                cmdgen_loss += - tf.reduce_sum(logp * t) / len(cmdlist)
+            C, V, K = len(cmds), len(ents2id), nwlogits.shape[0]
+            nwoutput = []
+            cmdents = [[i for i in z if i != pad] for z in x['cmdprev_input']]
+            j = 0
+            for i in range(K - 1):
+                if len(cmdents[i + 1]) > len(cmdents[i]):
+                    j += 1
+                    nwoutput.append(cmdents[i+1][j])
+                else:
+                    j = 0
+                    nwoutput.append(stend)
+            nwoutput.append(stend)
             # regularization loss
+
+            nwp = tf.math.softmax(nwlogits, axis=-1)
+            lognwp = tf.math.log(nwp + 1e-12)
+            nwoutputx = tf.one_hot(nwoutput, depth=V)
+            cmdgen_loss += - tf.reduce_sum(lognwp * nwoutputx) / K
+
             reg_loss += tf.math.add_n(
                 [l for l in model.losses
                  if not np.isnan(l.numpy())]) / batch_size
@@ -184,7 +213,6 @@ for datafile in all_batchfiles:
 # order data and obtain value policy and nextwords
 data = np.random.permutation(data)
 
-
 ndata = len(data)
 batch_size = int(min(len(data), 8)) if len(data) > 0 else 1
 print_every = 40 / batch_size
@@ -193,9 +221,10 @@ num_batches = ndata // batch_size
 ckpt_every = 160 / batch_size
 num_epochs = 2 if num_batches < 40 else 1
 
-msg = "OPTIMIZATION: epochs: {} batches: {}  time: {}"
-print(msg.format(num_epochs, num_batches, tstamp))
+msg = "OPTIMIZATION: epochs: {} batches: {}  total data: {}"
+print(msg.format(num_epochs, num_batches, len(data)))
 
+iteration = 0
 for e in range(num_epochs):
     for b in range(num_batches):
         data_batch = get_batch(data, b, batch_size)
@@ -207,16 +236,18 @@ for e in range(num_epochs):
             print(e)
             continue
 
-        msg = "Optimizing... epoch: {} batch: {:2d}, " +\
+        msg = "Optimizing... epoch: {} batch: {:2d}, iter: {:3d}" +\
             "vloss: {:.2f}, ploss: {:.2f}, " +\
-            "cgloss: {:.3f}, rloss {:.2f}, loss {:.2f}"
+            "cgloss: {:.2f}, rloss {:.2f}, loss {:.2f}"
 
         print(msg.format(
-            e, b, vloss.numpy().item(),
+            e, b, (b + 1) * (batch_size), vloss.numpy().item(),
             ploss.numpy().item(), cgloss.numpy().item(),
             rloss.numpy().item(), loss.numpy().item()))
 
-    wfile = "trained_models/{}.h5".format(tstamp)
-    network.save_weights(wfile)
+        if iteration % ckpt_every == 0:
+            wfile = "trained_models/{}.h5".format(tstamp)
+            print("saving trained weights to {}...".format(wfile))
+            network.save_weights(wfile)
 
 print(0)

@@ -558,7 +558,7 @@ class MCTSAgent:
                     feedback_history = node.feedback_history()
                     inputs = dict()
                     inputs['cmdlist'] = node.inputs['cmdlist']
-                    inputs['ents2id'] = node.inputs['ents2id']
+                    inputs['ents2id'] = {k: i for k, i in node.inputs['ents2id'].items()}
                     inputs['memory_input'] = node.inputs['memory_input'].numpy().tolist()
                     inputs['location_input'] = node.inputs['location_input'].numpy().tolist()
                     inputs['cmdlist_input'] = node.inputs['cmdlist_input'].numpy().tolist()
