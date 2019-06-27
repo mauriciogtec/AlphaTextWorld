@@ -26,8 +26,11 @@ parser = argparse.ArgumentParser(description=description)
 # parser.add_argument('--gameindex',
 #                     type=int, default=1,
 #                     help='Number of games to be played.')
-parser.add_argument('--subtrees',
+parser.add_argument('--num_games',
                     type=int, default=10,
+                    help='Number of games to play.')
+parser.add_argument('--subtrees',
+                    type=int, default=50,
                     help='Subtrees to spawn.')
 parser.add_argument('--temperature',
                     type=float, default=0.5,
@@ -53,6 +56,7 @@ args = parser.parse_args()
 # print("Arguments: ", args)
 
 cwd = args.cwd
+num_games = args.num_games
 # gameindex = args.gameindex
 min_time = args.min_time
 max_steps = args.max_steps
@@ -102,39 +106,41 @@ gamefiles = glob.glob(cwd + "../train/*.ulx")
 
 # gamefile = gamefiles[gameindex]
 # np.random.seed(time.time())
-i = np.random.choice(len(gamefiles))
-gamefile = gamefiles[i]
-# print(gamefiles)
-# gamefile = gamefiles[2]
-# print(gamefile)
-# if verbose:
-#     print("Opening game {}".format(gamefile))
 
-agent = mcts.MCTSAgent(
-    gamefile, network,
-    cpuct=0.4,
-    dnoise=0.05,
-    max_steps=max_steps,
-    temperature=temperature)
-agent.gamefile
-
-# Play and generate data ----------------------------
-t = 0.0
-data = []
-while t < min_time:
-    timer = time.time()
-    envscore, num_moves, infos, reward = agent.play_episode(
-        subtrees=subtrees,
-        max_subtree_depth=subtree_depth,
-        verbose=False)
-    msg = "moves: {:3d}, envscore: {}/{}, reward: {:.2f}"
+for _ in range(num_games):
+    i = np.random.choice(len(gamefiles))
+    gamefile = gamefiles[i]
+    # print(gamefiles)
+    # gamefile = gamefiles[2]
+    # print(gamefile)
     # if verbose:
-    #     print(msg.format(num_moves, envscore, infos["max_score"], reward))
-    data.extend(agent.dump_tree(mainbranch=True))
-    t += time.time() - timer
+    #     print("Opening game {}".format(gamefile))
 
-tstamp = math.trunc(100 * time.time())
-datafile = cwd + "{}/{}.json".format(output_dir, tstamp)
-with open(datafile, 'w') as fn:
-    ujson.dump(data, fn)
-0
+    agent = mcts.MCTSAgent(
+        gamefile, network,
+        cpuct=0.4,
+        dnoise=0.05,
+        max_steps=max_steps,
+        temperature=temperature)
+    agent.gamefile
+
+    # Play and generate data ----------------------------
+    t = 0.0
+    data = []
+    while t < min_time:
+        timer = time.time()
+        envscore, num_moves, infos, reward = agent.play_episode(
+            subtrees=subtrees,
+            max_subtree_depth=subtree_depth,
+            verbose=False)
+        msg = "moves: {:3d}, envscore: {}/{}, reward: {:.2f}"
+        # if verbose:
+        #     print(msg.format(num_moves, envscore, infos["max_score"], reward))
+        data.extend(agent.dump_tree(mainbranch=True))
+        t += time.time() - timer
+
+    tstamp = math.trunc(100 * time.time())
+    datafile = cwd + "{}/{}.json".format(output_dir, tstamp)
+    with open(datafile, 'w') as fn:
+        ujson.dump(data, fn)
+print(0)

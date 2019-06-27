@@ -274,5 +274,5 @@ srun -N 1 -n 1 python3 play_remote.py --temperature 0.5 --subtrees 100 --subtree
 srun -N 1 -n 1 python3 play_remote.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
 srun -N 1 -n 1 python3 play_remote.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
 srun -N 1 -n 1 python3 play_remote.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
-srun -N 1 -n 1 python3 play_remote.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0 &
+srun -N 1 -n 1 python3 play_remote.py --temperature 0.5 --subtrees 100 --subtree_depth 5 --verbose 0
 wait
