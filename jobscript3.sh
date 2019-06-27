@@ -11,6 +11,7 @@
 
 module load intel/17.0.4
 module load python3/3.6.3
+pip3 install --user h5py
 
 export HDF5_USE_FILE_LOCKING=FALSE
 # export MKL_NUM_THREADS=2
