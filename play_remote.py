@@ -13,8 +13,8 @@ import math
 import os
 
 
-tf.config.threading.set_inter_op_parallelism_threads(2)
-tf.config.threading.set_intra_op_parallelism_threads(2)
+tf.config.threading.set_inter_op_parallelism_threads(1)
+tf.config.threading.set_intra_op_parallelism_threads(1)
 
 
 # import socket
@@ -109,8 +109,8 @@ gamefiles = glob.glob(cwd + "../train/*.ulx")
 # gamefile = gamefiles[gameindex]
 gamefile = np.random.choice(gamefiles)
 
-if verbose:
-    print("Opening game {}".format(gamefile))
+# if verbose:
+#     print("Opening game {}".format(gamefile))
 
 agent = mcts.MCTSAgent(
     gamefile, network,
@@ -127,10 +127,10 @@ while t < min_time:
     envscore, num_moves, infos, reward = agent.play_episode(
         subtrees=subtrees,
         max_subtree_depth=subtree_depth,
-        verbose=verbose)
+        verbose=False)
     msg = "moves: {:3d}, envscore: {}/{}, reward: {:.2f}"
-    if verbose:
-        print(msg.format(num_moves, envscore, infos["max_score"], reward))
+    # if verbose:
+    #     print(msg.format(num_moves, envscore, infos["max_score"], reward))
     data.extend(agent.dump_tree(mainbranch=True))
     t += time.time() - timer
 
