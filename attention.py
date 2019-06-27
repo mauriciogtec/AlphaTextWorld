@@ -16,7 +16,7 @@ class AlphaTextWorldNet(models.Model):
     """
     Learn to play from memory
     """
-    REG_PENALTY = 1e-5
+    REG_PENALTY = 1e-3
     KSIZE = 3
     HIDDEN_UNITS = 64
     ATT_HEADS = 4

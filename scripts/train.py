@@ -102,10 +102,10 @@ def get_batch(x, i, batch_size):
 def train(model, optim, data_batch):
     batch_size = len(data_batch)
     
-    inputs_batch = [d['inputs'] for d in data]
+    inputs_batch = [d['inputs'] for d in data_batch]
     cmdlist_batch = [d['cmdlist'] for d in data_batch]
-    value_batch = [d['value'] for d in data]
-    counts_batch = [d['counts'] for d in data]
+    value_batch = [d['value'] for d in data_batch]
+    counts_batch = [d['counts'] for d in data_batch]
     policy_batch = [np.array(x) / sum(x) for x in counts_batch]
     policy_batch = [0.98 * p + 0.02 / len(p) for p in policy_batch]
 
@@ -246,9 +246,9 @@ for e in range(num_epochs):
             print(e)
             continue
 
-        msg = "Optimizing... epoch: {} batch: {:2d}, iter: {:3d}" +\
+        msg = "Optimizing... epoch: {} batch: {:2d}, iter: {:3d}, " +\
             "vloss: {:.2f}, ploss: {:.2f}, " +\
-            "cgloss: {:.2f}, rloss {:.2f}, loss {:.2f}"
+            "cgloss: {:.2f}, rloss {:.4f}, loss {:.2f}"
 
         print(msg.format(
             e, b, (b + 1) * (batch_size), vloss.numpy().item(),
