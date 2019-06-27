@@ -572,46 +572,46 @@ class MCTSAgent:
         return data
 
 
-if __name__ == "__main__":
-    import glob
-    path = '/home/mauriciogtec/'
-    textworld_vocab = set()
-    with open(path + 'Github/TextWorld/montecarlo/vocab.txt', 'r') as fn:
-        for line in fn:
-            word = line[:-1]
-            textworld_vocab.add(word)
+# if __name__ == "__main__":
+#     import glob
+#     path = '/home/mauriciogtec/'
+#     textworld_vocab = set()
+#     with open(path + 'Github/TextWorld/montecarlo/vocab.txt', 'r') as fn:
+#         for line in fn:
+#             word = line[:-1]
+#             textworld_vocab.add(word)
 
-    embedding_dim = 100
-    embedding_fdim = 64
-    embeddings, vocab = load_embeddings(
-        embeddingsdir=path + "glove.6B/",
-        embedding_dim=embedding_dim,  # try 50
-        vocab=textworld_vocab)
+#     embedding_dim = 100
+#     embedding_fdim = 64
+#     embeddings, vocab = load_embeddings(
+#         embeddingsdir=path + "glove.6B/",
+#         embedding_dim=embedding_dim,  # try 50
+#         vocab=textworld_vocab)
 
-    index = np.random.permutation(range(embedding_dim))[:embedding_fdim]
-    embeddings = embeddings[index, :]
+#     index = np.random.permutation(range(embedding_dim))[:embedding_fdim]
+#     embeddings = embeddings[index, :]
 
-    num_games = 100
-    max_time = 45
-    max_episodes = 5
-    gamefiles = glob.glob("games/*.ulx")
-    gamefiles = [gamefiles[i] for i in
-                 np.random.permutation(range(len(gamefiles)))]
+#     num_games = 100
+#     max_time = 45
+#     max_episodes = 5
+#     gamefiles = glob.glob("games/*.ulx")
+#     gamefiles = [gamefiles[i] for i in
+#                  np.random.permutation(range(len(gamefiles)))]
 
-    network = nn.AlphaTextWorldNet(embeddings, vocab)
+#     network = nn.AlphaTextWorldNet(embeddings, vocab)
 
-    g = 0
-    gamefile = gamefiles[g]
-    print("Opening game {}".format(gamefile))
+#     g = 0
+#     gamefile = gamefiles[g]
+#     print("Opening game {}".format(gamefile))
 
-    # rain a few round with 25 to get network started
-    agent = MCTSAgent(gamefile, network, cpuct=0.3, max_steps=25)
+#     # rain a few round with 25 to get network started
+#     agent = MCTSAgent(gamefile, network, cpuct=0.3, max_steps=25)
 
-    # Play and generate data ----------------------------
-    envscore, num_moves, infos, reward =\
-        agent.play_episode(subtrees=10, max_subtree_depth=10, verbose=True)
+#     # Play and generate data ----------------------------
+#     envscore, num_moves, infos, reward =\
+#         agent.play_episode(subtrees=10, max_subtree_depth=10, verbose=True)
 
-    data = agent.dump_tree()
+#     data = agent.dump_tree()
 
-    msg = "moves: {:3d}, envscore: {}/{}, reward: {:.2f}"
-    print(msg.format(num_moves, envscore, infos["max_score"], reward))
+#     msg = "moves: {:3d}, envscore: {}/{}, reward: {:.2f}"
+#     print(msg.format(num_moves, envscore, infos["max_score"], reward))

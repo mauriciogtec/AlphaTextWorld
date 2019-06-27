@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "PlayRemote2",
+            "type": "python",
+            "request": "launch",
+            "program": "/home/mauriciogtec/Github/AlphaTextWorld/play_remote2.py",
+            "console": "integratedTerminal",
+            "cwd": "/home/mauriciogtec/Github/AlphaTextWorld/"
+        },
+        {
             "name": "Attention",
             "type": "python",
             "request": "launch",

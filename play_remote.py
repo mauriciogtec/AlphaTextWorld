@@ -17,6 +17,8 @@ tf.config.threading.set_inter_op_parallelism_threads(1)
 tf.config.threading.set_intra_op_parallelism_threads(1)
 
 
+# np.random.seed(seed=math.trunc(time.time()))
+
 # import socket
 # from time import sleep
 
@@ -89,7 +91,7 @@ embeddings, vocab = load_embeddings(
     embeddingsdir=embeddingsdir,
     embedding_dim=embedding_dim,  # try 50
     embedding_fdim=embedding_dim,
-    seed=110104,
+    seed=None,
     vocab=textworld_vocab)
 
 index = np.random.permutation(range(embedding_dim))[:embedding_fdim]

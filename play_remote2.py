@@ -15,7 +15,6 @@ import os
 # import socket
 # from time import sleep
 
-
 # def work(jobnum):
 #     print("Starting job on {}.".format(socket.gethostname()))
 #     # print("Finished job {}...\n".format(jobnum))
@@ -84,7 +83,7 @@ embeddings, vocab = load_embeddings(
     embeddingsdir=embeddingsdir,
     embedding_dim=embedding_dim,  # try 50
     embedding_fdim=embedding_dim,
-    seed=110104,
+    seed=None,
     vocab=textworld_vocab)
 
 index = np.random.permutation(range(embedding_dim))[:embedding_fdim]
@@ -102,8 +101,12 @@ if len(models) > 0:
 gamefiles = glob.glob(cwd + "../train/*.ulx")
 
 # gamefile = gamefiles[gameindex]
-gamefile = np.random.choice(gamefiles)
-
+# np.random.seed(time.time())
+i = np.random.choice(len(gamefiles))
+gamefile = gamefiles[i]
+print(gamefiles)
+# gamefile = gamefiles[2]
+# print(gamefile)
 # if verbose:
 #     print("Opening game {}".format(gamefile))
 
@@ -113,6 +116,7 @@ agent = mcts.MCTSAgent(
     dnoise=0.05,
     max_steps=max_steps,
     temperature=temperature)
+agent.gamefile
 
 # Play and generate data ----------------------------
 t = 0.0
