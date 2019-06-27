@@ -21,24 +21,19 @@ alldir = wd + "allgames/"
 traindir = wd + "train/"
 testdir = wd + "test/"
 
+sh = ""
 for fn in trainfiles:
     json = fn.replace(".ulx", ".json")
     z8 = fn.replace(".ulx", ".z8")
-    cmd = "cp {}{} {}{}"
-    cmd = cmd.format(alldir, fn, traindir, fn)
-    os.system(cmd)
-    cmd = cmd.format(alldir, json, traindir, json)
-    os.system(cmd)
-    cmd = cmd.format(alldir, z8, traindir, z8)
-    os.system(cmd)
+    sh += "cp {}/{} {}/{}\n".format(alldir, fn, traindir, fn)
+    sh += "cp {}/{} {}/{}".format(alldir, json, traindir, json)
+    sh += "cp {}/{} {}/{}".format(alldir, z8, traindir, z8)
 
 for fn in testfiles:
     json = fn.replace(".ulx", ".json")
     z8 = fn.replace(".ulx", ".z8")
-    cmd = "cp {}/{} {}/{}"
-    cmd = cmd.format(alldir, fn, testdir, fn)
-    os.system(cmd)
-    cmd = cmd.format(alldir, json, testdir, json)
-    os.system(cmd)
-    cmd = cmd.format(alldir, z8, testdir, z8)
-    os.system(cmd)
+    sh += "cp {}/{} {}/{}".format(alldir, fn, testdir, fn)
+    sh += "cp {}/{} {}/{}".format(alldir, json, testdir, json)
+    sh += "cp {}/{} {}/{}".format(alldir, z8, testdir, z8)
+
+with open(wd + "copybash")
