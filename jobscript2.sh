@@ -12,6 +12,8 @@
 module load intel/17.0.4
 module load python3/3.6.3
 pip3 install --user keras h5py==2.8.0
+module load phdf5
+
 export HDF5_USE_FILE_LOCKING=FALSE
 
 
