@@ -12,6 +12,11 @@ import ujson
 import math
 import os
 
+
+tf.config.threading.set_inter_op_parallelism_threads(2)
+tf.config.threading.set_intra_op_parallelism_threads(2)
+
+
 # import socket
 # from time import sleep
 
@@ -75,9 +80,6 @@ with open(cwd + 'textworld_vocab.txt', 'r') as fn:
     for line in fn:
         word = line[:-1]
         textworld_vocab.add(word)
-
-tf.config.threading.set_inter_op_parallelism_threads(1)
-tf.config.threading.set_intra_op_parallelism_threads(1)
 
 
 embeddingsdir = cwd + "../glove.6B/"
