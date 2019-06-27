@@ -3,10 +3,10 @@
 #SBATCH -N 1
 #SBATCH -n 2
 #SBATCH -c 1
-#SBATCH -p development
+#SBATCH -p normal
 #SBATCH -J gnormal
 #SBATCH -e slurm-%j.err
-#SBATCH -t 0:120:0
+#SBATCH -t 4:0:0
 
 
 module load intel/17.0.4

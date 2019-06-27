@@ -6,7 +6,7 @@
 #SBATCH -p normal
 #SBATCH -J gfull
 #SBATCH -e slurm-%j.err
-#SBATCH -t 2:0:0
+#SBATCH -t 4:0:0
 
 
 module load intel/17.0.4

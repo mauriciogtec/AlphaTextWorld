@@ -1,13 +1,13 @@
 #!/bin/bash
 
-#SBATCH -N 32
+#SBATCH -N 16
 #SBATCH -n 32
 #SBATCH --tasks-per-node 1
 #SBATCH -c 1
 #SBATCH -p development
 #SBATCH -J gnormal
 #SBATCH -e slurm-%j.err
-#SBATCH -t 0:120:0
+#SBATCH -t 2:0:0
 
 
 module load intel/17.0.4
