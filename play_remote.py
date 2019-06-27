@@ -12,6 +12,15 @@ import ujson
 import math
 import os
 
+import socket
+from time import sleep
+
+
+def work(jobnum):
+    print("Starting job on {}.".format(socket.gethostname()))
+    # print("Finished job {}...\n".format(jobnum))
+work(0)
+
 # ----------------------
 description = "Play a round of games."
 parser = argparse.ArgumentParser(description=description)
