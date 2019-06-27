@@ -25,7 +25,7 @@ parser.add_argument('--subtree_depth',
                     type=int, default=5,
                     help='Max depth of search trees.')
 parser.add_argument('--max_steps',
-                    type=int, default=1,
+                    type=int, default=25,
                     help='Max number of steps per game. Defaults to 100.')
 parser.add_argument('--min_time',
                     type=float, default=60,
