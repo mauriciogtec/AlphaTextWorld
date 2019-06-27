@@ -36,4 +36,5 @@ for fn in testfiles:
     sh += "cp {}/{} {}/{}".format(alldir, json, testdir, json)
     sh += "cp {}/{} {}/{}".format(alldir, z8, testdir, z8)
 
-with open(wd + "copybash")
+with open(wd + "copybash.sh", "w") as fn:
+    fn.write(sh)
