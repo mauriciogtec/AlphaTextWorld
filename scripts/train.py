@@ -65,7 +65,17 @@ embeddings, vocab = load_embeddings(
     vocab=textworld_vocab)
 index = np.random.permutation(range(embedding_dim))[:embedding_fdim]
 embeddings = embeddings[index, :]
+
+# instantiate network
 network = nn.AlphaTextWorldNet(embeddings, vocab)
+network(inputs={
+    'memory_input': tf.constant([[0]], tf.int32),
+    'cmdlist_input': tf.constant([[0]], tf.int32),
+    'location_input': tf.constant([0], tf.int32),
+    'cmdprev_input': tf.constant([[0]], tf.int32),
+    'ents2id': {".": 0},
+    'entvocab_input': tf.constant([[0]], tf.int32)},
+    training=True)
 
 optim = tf.optimizers.Nadam(
     learning_rate=0.00001,
@@ -221,7 +231,7 @@ num_batches = ndata // batch_size
 ckpt_every = 160 / batch_size
 num_epochs = 2 if num_batches < 40 else 1
 
-msg = "OPTIMIZATION: epochs: {} batches: {}  total data: {}"
+msg = "OPTIMIZATION: epochs: {} batches: {}  total plays: {}"
 print(msg.format(num_epochs, num_batches, len(data)))
 
 iteration = 0
@@ -249,5 +259,7 @@ for e in range(num_epochs):
             wfile = "trained_models/{}.h5".format(tstamp)
             print("saving trained weights to {}...".format(wfile))
             network.save_weights(wfile)
+
+        iteration += 1
 
 print(0)
