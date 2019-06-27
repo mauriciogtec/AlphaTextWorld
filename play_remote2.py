@@ -104,7 +104,7 @@ gamefiles = glob.glob(cwd + "../train/*.ulx")
 # np.random.seed(time.time())
 i = np.random.choice(len(gamefiles))
 gamefile = gamefiles[i]
-print(gamefiles)
+# print(gamefiles)
 # gamefile = gamefiles[2]
 # print(gamefile)
 # if verbose:

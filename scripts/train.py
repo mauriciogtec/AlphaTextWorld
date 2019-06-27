@@ -61,7 +61,7 @@ embeddings, vocab = load_embeddings(
     embeddingsdir="/home/mauriciogtec/glove.6B/",
     embedding_dim=embedding_dim,  # try 50
     embedding_fdim=embedding_dim,
-    seed=110104,
+    seed=None,
     vocab=textworld_vocab)
 
 optim = tf.optimizers.Nadam(
@@ -76,6 +76,9 @@ if len(modelfiles) > 0:
     fn = max(modelfiles)
     print("Loading weights:", fn)
     network.load_weights(fn)
+else:
+    tstamp = math.trunc(100 * time.time())
+    network.save_weights('{}trained_models/{}.h5'.format(cwd, tstamp))
 
 
 def train(model, optim, data_batch):
@@ -156,9 +159,9 @@ for s in datatstamps:
         data.extend(d)
 
 data = data_current
-data = [x for x in data if
-        sum(x['counts']) > 10 and
-        len(x['cmdlist']) >= 1]
+# data = [x for x in data if
+#         sum(x['counts']) > 10 and
+#         len(x['cmdlist']) >= 1]
 
 data = np.random.permutation(data)
 

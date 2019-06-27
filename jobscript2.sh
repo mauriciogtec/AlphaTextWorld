@@ -4,7 +4,7 @@
 #SBATCH -n 16
 #SBATCH -c 1
 #SBATCH -p normal
-#SBATCH -J gameplay
+#SBATCH -J gfull
 #SBATCH -e slurm-%j.err
 #SBATCH -t 1:0:0
 
