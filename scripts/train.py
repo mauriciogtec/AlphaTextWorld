@@ -85,15 +85,19 @@ else:
     network.save_weights('{}trained_models/{}.h5'.format(cwd, tstamp))
 
 
+def get_batch(x, i, batch_size):
+    return x[(i*batch_size):((i+1)*batch_size)]
+
+
 def train(model, optim, data_batch):
-    batch_size = len(inputs_batch)
+    batch_size = len(data_batch)
     
     inputs_batch = [d['inputs'] for d in data]
     cmdlist_batch = [d['cmdlist'] for d in data_batch]
     value_batch = [d['value'] for d in data]
     counts_batch = [d['counts'] for d in data]
     policy_batch = [np.array(x) / sum(x) for x in counts_batch]
-    policy_batch = [0.98 * p + 0.02 / len(p) for p in policy]
+    policy_batch = [0.98 * p + 0.02 / len(p) for p in policy_batch]
     nwoutput_batch = [d['nwoutput'] for d in data_batch]
 
     value_loss, policy_loss, cmdgen_loss, reg_loss = 0, 0, 0, 0

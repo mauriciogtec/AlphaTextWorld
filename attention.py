@@ -154,6 +154,7 @@ class AlphaTextWorldNet(models.Model):
         location = inputs['location_input']
 
         if training:
+            ents2id = inputs['ents2id']
             entvocab = inputs['entvocab_input']
             cmdprev = inputs['cmdprev_input']
 

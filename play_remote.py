@@ -107,7 +107,7 @@ if len(models) > 0:
     network.load_weights(latest)
 
 # rain a few round with 25 to get network started
-gamefiles = glob.glob(cwd + "../train/*.ulx")
+gamefiles = glob.glob(cwd + "../allgames/*.ulx")
 
 # gamefile = gamefiles[gameindex]
 gamefile = np.random.choice(gamefiles)
