@@ -16,7 +16,7 @@ class AlphaTextWorldNet(models.Model):
     """
     Learn to play from memory
     """
-    REG_PENALTY = 1e-4
+    REG_PENALTY = 3e-5
     KSIZE = 3
     HIDDEN_UNITS = 64
     ATT_HEADS = 4
@@ -197,7 +197,9 @@ class AlphaTextWorldNet(models.Model):
         x = self.att_memory_cmdlist_turn(
             queryx, x, training=training)  # C x dim
         x += locx  # C x dim
-        policy_logits = self.policy_head(x, training=training)  # (C)
+        x = self.policy_head(x, training=training)  # (C)
+        policy_logits = tf.clip_by_value(
+            x, clip_value_min=-10, clip_value_max=10)
 
         output = {'value': value, 'policy_logits': policy_logits}
 
