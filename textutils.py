@@ -137,20 +137,24 @@ def noun_phrases(texts):
     sentences = nltk.sent_tokenize(document)
     sentences = [nltk.word_tokenize(sent) for sent in sentences]
     sentences = [nltk.pos_tag(sent) for sent in sentences]
-    grammar = "NP: {<DT>?<JJ>*<NN>+}"
-    cp = nltk.RegexpParser(grammar)
+    grammars = [
+        ("NP", "NP: {<DT>?<JJ>*<NN>+}"),
+        ("NAME", "NAME: {<NNP>+}")
+    ]
     noun_phrases = []
-    for s in sentences:
-        result = cp.parse(s)
-        for x in result.subtrees():
-            if x.label() == 'NP':
-                wlist = [z[0] for z in x if z[1] != "DT"]
-                N = len(wlist)
-                for i in range(1, N):
-                    buffer = wlist[i]
-                    for j in range(i + 1, N):
-                        buffer += ' ' + wlist[j]
-                    noun_phrases.append(buffer)
+    for code, grammar in grammars:
+        cp = nltk.RegexpParser(grammar)
+        for s in sentences:
+            result = cp.parse(s)
+            for x in result.subtrees():
+                if x.label() == code:
+                    wlist = [z[0] for z in x if z[1] != "DT"]
+                    N = len(wlist)
+                    for i in range(1, N):
+                        buffer = wlist[i]
+                        for j in range(i + 1, N):
+                            buffer += ' ' + wlist[j]
+                        noun_phrases.append(buffer)
     noun_phrases = list(set(noun_phrases))
     return noun_phrases
 

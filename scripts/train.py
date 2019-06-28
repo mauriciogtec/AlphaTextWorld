@@ -46,6 +46,7 @@ from custom_layers import *
 from textutils import *
 import attention as nn
 import mctsagent as mcts
+import nltk
 # ----------------------
 
 path = '/home/mauriciogtec/'
@@ -54,6 +55,12 @@ with open(path + 'Github/TextWorld/montecarlo/vocab.txt', 'r') as fn:
     for line in fn:
         word = line[:-1]
         textworld_vocab.add(word)
+
+words = [x for x in textworld_vocab if x != "" and not re.search("[^a-z]", x)]
+tags = nltk.pos_tag(words)
+
+nouns = [x[0] for x in tags if x[1] == 'NN']
+adjectives = [x[0] for x in tags if x[1] == 'JJ']
 
 embedding_dim = 100
 embedding_fdim = 64
@@ -225,8 +232,7 @@ data = np.random.permutation(data)
 
 ndata = len(data)
 batch_size = int(min(len(data), 8)) if len(data) > 0 else 1
-print_every = 40 / batch_size
-num_epochs = 2 # to compare
+num_epochs = 5 # to compare
 num_batches = ndata // batch_size
 ckpt_every = 160 / batch_size
 # num_epochs = 2 if num_batches < 40 else 1
@@ -236,6 +242,7 @@ print(msg.format(num_epochs, num_batches, len(data)))
 
 iteration = 0
 for e in range(num_epochs):
+    mv, mp, mcg, mr, ml = 0, 0, 0, 0, 0
     for b in range(num_batches):
         data_batch = get_batch(data, b, batch_size)
 
@@ -255,13 +262,25 @@ for e in range(num_epochs):
             ploss.numpy().item(), cgloss.numpy().item(),
             rloss.numpy().item(), loss.numpy().item()))
 
+        M = iteration % ckpt_every
+        mv += (vloss.numpy().item() - mv) / (M + 1)
+        mp += (ploss.numpy().item() - mp) / (M + 1)
+        mcg += (cgloss.numpy().item() - mcg) / (M + 1)
+        mr += (rloss.numpy().item() - mr) / (M + 1)
+        ml += (loss.numpy().item() - ml) / (M + 1)
+
+        iteration += 1
+
         if iteration % ckpt_every == 0:
             tstamp = math.trunc(100 * time.time())
             wfile = "trained_models/{}.h5".format(tstamp)
             print("saving trained weights to {}...".format(wfile))
             network.save_weights(wfile)
 
-        iteration += 1
+            msg = "".join(["Ckpt summary: vloss: {:.2f}, ploss: {:.2f}",
+                           ", cgloss: {:.2f}, rloss: {:.2f}, loss: {:.2f}"])
+            print(msg.format(mv, mp, mcg, mr, ml))
+            mv, mp, mcg, mr, ml = 0, 0, 0, 0, 0
 
 tstamp = math.trunc(100 * time.time())
 wfile = "trained_models/{}.h5".format(tstamp)

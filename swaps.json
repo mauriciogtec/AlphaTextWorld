@@ -1,0 +1,7 @@
+collections = [
+   ["north", "south"],
+   ["east", "west"],
+   ["purple", "yellow", "red"],
+   ["banana", "apple", "potato", "parsley", "pork"],
+   ["wooden", "screen", "metal", "plastic"]
+]
