@@ -88,7 +88,7 @@ network(inputs={
     training=True)
 
 optim = tf.optimizers.Nadam(
-    learning_rate=0.03,
+    learning_rate=0.003,
     clipnorm=45.0,
     beta_1=0.9,
     beta_2=0.98)
