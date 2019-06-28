@@ -19,10 +19,10 @@ parser.add_argument('--gameindex',
                     type=int, default=1,
                     help='Number of games to be played.')
 parser.add_argument('--subtrees',
-                    type=int, default=1,
+                    type=int, default=50,
                     help='Subtrees to spawn.')
 parser.add_argument('--subtree_depth',
-                    type=int, default=0,
+                    type=int, default=2,
                     help='Max depth of search trees.')
 parser.add_argument('--max_steps',
                     type=int, default=100,
@@ -65,7 +65,7 @@ embeddings, vocab = load_embeddings(
     embeddingsdir="/home/mauriciogtec/glove.6B/",
     embedding_dim=embedding_dim,  # try 50
     embedding_fdim=embedding_dim,
-    seed=110104,
+    seed=None,
     vocab=textworld_vocab)
 
 index = np.random.permutation(range(embedding_dim))[:embedding_fdim]
@@ -92,14 +92,15 @@ if len(models) > 0:
 
 # rain a few round with 25 to get network started
 gamefiles = glob.glob(cwd + "/games/*.ulx")
-gamefile = gamefiles[gameindex]
+# gamefile = gamefiles[gameindex]
+gamefile = np.random.choice(gamefiles)
 print("Opening game {}".format(gamefile))
 agent = mcts.MCTSAgent(
     gamefile, network,
     cpuct=0.4,
-    dnoise=0.05,
+    dnoise=0.03,
     max_steps=max_steps,
-    temperature=0.1)
+    temperature=0.3)
 
 # Play and generate data ----------------------------
 t = 0.0
