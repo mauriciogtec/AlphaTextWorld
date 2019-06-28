@@ -204,8 +204,8 @@ def train(model, optim, data_batch):
 
 
 # Pull random games from last games
-num_choice = 75
-num_consider = 35
+num_choice = 200
+num_consider = 50
 all_batchfiles = glob.glob("data/*.json")
 all_batchfiles.sort(reverse=True)
 all_batchfiles = all_batchfiles[1:num_consider]  # exclude current
