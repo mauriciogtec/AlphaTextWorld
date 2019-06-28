@@ -542,9 +542,9 @@ class MCTSAgent:
         """simple tree traversal for dumping data"""
         data = []
 
-        tovisit = deque(self.root)
+        tovisit = [self.root]
         while len(tovisit) > 0:
-            node = tovisit.popleft()
+            node = tovisit.pop(0)
             if not node.isleaf():
                 if not mainbranch or node._mainbranch:
                     # add node info to record
