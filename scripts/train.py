@@ -234,7 +234,7 @@ for datafile in all_batchfiles:
 data = np.random.permutation(data)
 
 ndata = len(data)
-batch_size = int(min(len(data), 16)) if len(data) > 0 else 1
+batch_size = int(min(len(data), 8)) if len(data) > 0 else 1
 num_epochs = 2 # to compare
 num_batches = ndata // batch_size
 ckpt_every = 160 / batch_size
