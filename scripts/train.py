@@ -202,7 +202,7 @@ def train(model, optim, data_batch):
 
 # Pull random games from last games
 num_choice = 50
-num_consider = 10
+num_consider = 50
 all_batchfiles = glob.glob("data/*.json")
 all_batchfiles.sort(reverse=True)
 all_batchfiles = all_batchfiles[1:num_consider]  # exclude current
@@ -232,7 +232,7 @@ data = np.random.permutation(data)
 
 ndata = len(data)
 batch_size = int(min(len(data), 8)) if len(data) > 0 else 1
-num_epochs = 5 # to compare
+num_epochs = 2 # to compare
 num_batches = ndata // batch_size
 ckpt_every = 160 / batch_size
 # num_epochs = 2 if num_batches < 40 else 1
