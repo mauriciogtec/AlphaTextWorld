@@ -226,10 +226,10 @@ data = np.random.permutation(data)
 ndata = len(data)
 batch_size = int(min(len(data), 8)) if len(data) > 0 else 1
 print_every = 40 / batch_size
-num_epochs = 1
+num_epochs = 2 # to compare
 num_batches = ndata // batch_size
 ckpt_every = 160 / batch_size
-num_epochs = 2 if num_batches < 40 else 1
+# num_epochs = 2 if num_batches < 40 else 1
 
 msg = "OPTIMIZATION: epochs: {} batches: {}  total plays: {}"
 print(msg.format(num_epochs, num_batches, len(data)))
@@ -256,10 +256,16 @@ for e in range(num_epochs):
             rloss.numpy().item(), loss.numpy().item()))
 
         if iteration % ckpt_every == 0:
+            tstamp = math.trunc(100 * time.time())
             wfile = "trained_models/{}.h5".format(tstamp)
             print("saving trained weights to {}...".format(wfile))
             network.save_weights(wfile)
 
         iteration += 1
+
+tstamp = math.trunc(100 * time.time())
+wfile = "trained_models/{}.h5".format(tstamp)
+print("saving trained weights to {}...".format(wfile))
+network.save_weights(wfile)
 
 print(0)
