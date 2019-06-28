@@ -94,6 +94,8 @@ embeddings, vocab = load_embeddings(
 index = np.random.permutation(range(embedding_dim))[:embedding_fdim]
 embeddings = embeddings[index, :]
 
+
+    
 # instantiate network
 network = nn.AlphaTextWorldNet(embeddings, vocab)
 network(inputs={
