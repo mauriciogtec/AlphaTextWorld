@@ -119,6 +119,7 @@ def load_embeddings(embeddingsdir: str, embedding_dim: int,
                 voc.append(word)
                 columns.append(embedding)
                 voc_size += 1
+            
     embeddings = np.hstack(columns)
 
     if embedding_fdim is not None:

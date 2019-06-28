@@ -73,6 +73,9 @@ embeddings, vocab = load_embeddings(
 index = np.random.permutation(range(embedding_dim))[:embedding_fdim]
 embeddings = embeddings[index, :]
 
+# with open("./final_vocab2.txt", "w") as fn:
+#     fn.write("\n".join(vocab))
+
 # instantiate network
 network = nn.AlphaTextWorldNet(embeddings, vocab)
 network(inputs={
@@ -85,7 +88,7 @@ network(inputs={
     training=True)
 
 optim = tf.optimizers.Nadam(
-    learning_rate=0.00003,
+    learning_rate=0.00005,
     clipnorm=30.0,
     beta_1=0.9,
     beta_2=0.98)
@@ -201,8 +204,8 @@ def train(model, optim, data_batch):
 
 
 # Pull random games from last games
-num_choice = 50
-num_consider = 50
+num_choice = 75
+num_consider = 35
 all_batchfiles = glob.glob("data/*.json")
 all_batchfiles.sort(reverse=True)
 all_batchfiles = all_batchfiles[1:num_consider]  # exclude current

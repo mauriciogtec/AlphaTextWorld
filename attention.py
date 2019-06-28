@@ -28,7 +28,7 @@ class AlphaTextWorldNet(models.Model):
 
         self.vocab = vocab
         self.word2id = {w: i for i, w in enumerate(vocab)}
-        self.id2word = {i: w for i, w in self.word2id.items()}
+        self.id2word = {i: w for w, i in self.word2id.items()}
         self.verbs = ["take", "cook", "go", "open", "drop",
                       "eat", "prepare", "examine", "chop", "dice"]
         self.adverbs = ["with", "from"]
