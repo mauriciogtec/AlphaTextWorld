@@ -88,7 +88,7 @@ network(inputs={
     training=True)
 
 optim = tf.optimizers.Nadam(
-    learning_rate=0.0001,
+    learning_rate=0.0003  ,
     clipnorm=30.0,
     beta_1=0.9,
     beta_2=0.98)
@@ -205,7 +205,7 @@ def train(model, optim, data_batch):
 
 # Pull random games from last games
 num_choice = 200
-num_consider = 50
+num_consider = 200
 all_batchfiles = glob.glob("data/*.json")
 all_batchfiles.sort(reverse=True)
 all_batchfiles = all_batchfiles[1:num_consider]  # exclude current
@@ -234,7 +234,7 @@ for datafile in all_batchfiles:
 data = np.random.permutation(data)
 
 ndata = len(data)
-batch_size = int(min(len(data), 8)) if len(data) > 0 else 1
+batch_size = int(min(len(data), 16)) if len(data) > 0 else 1
 num_epochs = 2 # to compare
 num_batches = ndata // batch_size
 ckpt_every = 160 / batch_size
