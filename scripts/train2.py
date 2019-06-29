@@ -17,12 +17,26 @@ import gc
 # ----------------------
 description = "Load data and train network"
 parser = argparse.ArgumentParser(description=description)
-# parser.add_argument('gamefile',
-#                     type=str,
-#                     help='Number of games to be played.')
-# parser.add_argument('--subtrees',
-#                     type=int, default=50,
-#                     help='Subtrees to spawn.')
+parser.add_argument('--num_consider',
+                    type=int,
+                    default=1000,
+                    help='Number of games latest games from which to sample')
+parser.add_argument('--num_data',
+                    type=int,
+                    default=1000,
+                    help='Number of data points to sample')
+parser.add_argument('--batch_size',
+                    type=int,
+                    default=4,
+                    help='Batch size')
+parser.add_argument('--ckpt_every',
+                    type=int,
+                    default=50,
+                    help='How many batches often print and save results')
+parser.add_argument('--num_epochs',
+                    type=int,
+                    default=2,
+                    help='Epochs in these data.')
 # parser.add_argument('--subtree_depth',
 #                     type=int, default=10,
 #                     help='Max depth of search trees.')
@@ -42,6 +56,12 @@ print("Arguments: ", args)
 
 cwd = args.cwd
 model_dir = args.model_dir
+# num_choice = args.num_choice
+num_consider = args.num_consider
+num_data = args.num_data
+ckpt_every = args.ckpt_every
+batch_size = args.batch_size
+num_epochs = args.num_epochs
 
 sys.path.append(cwd)
 from custom_layers import *
@@ -51,7 +71,7 @@ import mctsagent as mcts
 import nltk
 # ----------------------
 
-cwd = "."
+# cwd = "."
 
 textworld_vocab = set()
 with open(cwd + 'textworld_vocab.txt', 'r') as fn:
@@ -233,6 +253,7 @@ def train(model, optim, data_batch):
             # if len(cmdlist) < 2:
             #     continue
             # evaluate model
+            C, V, K = len(cmds), len(ents2id), len(cmdprev_input)
             inputs = {'memory_input': memory_input,
                       'cmdlist_input': cmdlist_input,
                       'entvocab_input': entvocab_input,
@@ -274,23 +295,23 @@ def train(model, optim, data_batch):
 
 
 # Pull random games from last games
-num_choice = 1500
-num_consider = 50
+# num_choice = 1500
+# num_consider = num_choice  # 10
 all_batchfiles = glob.glob("data/*.json")
 all_batchfiles.sort(reverse=True)
 all_batchfiles = all_batchfiles[:num_consider]  # exclude current
 
-if len(all_batchfiles) > num_choice:
-    datatstamps = np.random.choice(
-        all_batchfiles,
-        size=num_choice,
-        replace=False)
+# if len(all_batchfiles) > num_choice:
+#     datatstamps = np.random.choice(
+#         all_batchfiles,
+#         size=num_choice,
+#         replace=False)
 
 # extend current data
 data = []
 for datafile in all_batchfiles:
     # datafile = "data/{}.json".format(s)
-    print("Adding replay data from:", datafile)
+    # print("Adding replay data from:", datafile)
     with open(datafile, 'r') as fn:
         d = ujson.load(fn)
         data.extend(d)
@@ -304,13 +325,15 @@ data = [x for x in data if
         (x['value'] < -0.25)]
 
 # order data and obtain value policy and nextwords
-data = np.random.permutation(data)
+# data = np.random.permutation(data)
+data_idx = np.random.choice(np.arange(len(data)), num_data)
+data = [data[i] for i in data_idx]
 
 ndata = len(data)
-batch_size = int(min(len(data), 2)) if len(data) > 0 else 1
-num_epochs = 3 # to compare
+# batch_size = int(min(len(data), 2)) if len(data) > 0 else 1
+# num_epochs = 2 # to compare
 num_batches = ndata // batch_size
-ckpt_every = 50
+# ckpt_every = 50
 # num_epochs = 2 if num_batches < 40 else 1
 
 msg = "OPTIMIZATION: epochs: {} batches: {}  total plays: {}"
