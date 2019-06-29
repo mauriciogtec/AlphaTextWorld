@@ -375,8 +375,8 @@ class MCTSAgent:
         # remove with respect to entities and not local entities which should
         parent = node.parent
         if parent is None or not parent.extra_info['has_examined_cookbook']:
-            admissible = [cmd for cmd in admissible if
-                          cmd.split()[0] in ("examine", "go", "open")]
+            cmdlist = [cmd for cmd in cmdlist if
+                       cmd.split()[0] in ("examine", "go", "open")]
 
         tmp = []
         for cmd in cmdlist:

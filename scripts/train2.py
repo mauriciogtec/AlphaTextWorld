@@ -171,31 +171,29 @@ def train(model, optim, data_batch):
                 if toks[1] in ent_locs and (len(toks) < 4 or toks[3] in words)]
             cmds = [cmds[i] for i in cmdid_in_ents]
             cmdlist_input = [x['cmdlist_input'][i] for i in cmdid_in_ents]
-
             if len(cmds) == 0:
                 continue
-
             ents2id = x['ents2id']
-            cmdprev_input = x['cmdprev_input']
-
             pad, stend, unk = ents2id['<PAD>'], ents2id['</S>'], ents2id['<UNK>']
-
+            cmdprev_input = x['cmdprev_input']
             C, V, K = len(cmds), len(ents2id), len(cmdprev_input)
-
+            cmdents = [[i for i in z if i != pad] for z in cmdprev_input]
             nwoutput = []
-            cmdents = [[i for i in z if i != pad] for z in x['cmdprev_input']]
-            
+            idx_include = []
             j = 0
             for i in range(K - 1):
-                if len(cmdents[i + 1]) > len(cmdents[i]):
-                    j += 1
-                    nwoutput.append(cmdents[i+1][j])
-                else:
-                    j = 0
-                    nwoutput.append(stend)
-            nwoutput.append(stend)
-            unk = ents2id['<UNK>']
-
+                if unk in cmdents[i]:
+                    if len(cmdents[i + 1]) > len(cmdents[i]):
+                        j += 1
+                        nwoutput.append(cmdents[i+1][j])
+                    else:
+                        j = 0
+                        nwoutput.append(stend)
+                    idx_include.append(i)
+            if unk not in cmdents[K - 1]:
+                nwoutput.append(stend)
+                idx_include.append(K - 1)
+            cmdents = [cmdents[i] for i in idx_include]
             # ====================================
 
             cmdlist_input = tf.constant(cmdlist_input, tf.int32)
