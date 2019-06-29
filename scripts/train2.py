@@ -178,10 +178,13 @@ def train(model, optim, data_batch):
             ents2id = x['ents2id']
             cmdprev_input = x['cmdprev_input']
 
-            pad, stend = ents2id['<PAD>'], ents2id['</S>']
-            C, V, K = len(cmds), len(ents2id), nwlogits.shape[0]
+            pad, stend, unk = ents2id['<PAD>'], ents2id['</S>'], ents2id['<UNK>']
+
+            C, V, K = len(cmds), len(ents2id), len(cmdprev_input)
+
             nwoutput = []
-            cmdents = [[i for i in z if i != pad] for z in ]
+            cmdents = [[i for i in z if i != pad] for z in x['cmdprev_input']]
+            
             j = 0
             for i in range(K - 1):
                 if len(cmdents[i + 1]) > len(cmdents[i]):
@@ -200,6 +203,7 @@ def train(model, optim, data_batch):
             cmdprev_input = tf.constant(cmdprev_input, tf.int32)
             entvocab_input = tf.constant(x['entvocab_input'], tf.int32)
             location_input = tf.constant(x['location_input'], tf.int32)
+
             # skip round if there's only one command
             # if len(cmdlist) < 2:
             #     continue

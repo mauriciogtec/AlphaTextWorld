@@ -359,10 +359,8 @@ class MCTSAgent:
         
         admissible = [cmd for cmd in admissible
                       if cmd.split()[0] != 'examine' or
-                      cmd == 'examine cookbook']  # is the only thing to examine
+                      cmd == 'examine cookbook']  # only examine this
 
-        # if node.extra_info['has_examined_cookbook']:
-        #     admissible = [cmd for cmd in admissible
         #                   if cmd != "examine cookbook"]
 
         # this shouldn't be used anymore
@@ -373,11 +371,18 @@ class MCTSAgent:
         cmdlist = [cmd for cmd in admissible if 'go ' not in cmd]
 
         # remove commands that have unseen entities
+        # this is a bug in textworld, to minimize the impact we do two things
+        # remove with respect to entities and not local entities which should
+        parent = node.parent
+        if parent is None or not parent.extra_info['has_examined_cookbook']:
+            admissible = [cmd for cmd in admissible if
+                          cmd.split()[0] in ("go", "open")]
+
         tmp = []
         for cmd in cmdlist:
             words = self.tokenize_from_cmd_template(cmd)
             if words[1] in loc_entities and (len(words) < 4 or
-                                             words[3] in loc_entities):
+                                             words[3] in entities):
                 tmp.append(cmd)
             else:
                 if verbose:
