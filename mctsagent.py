@@ -340,12 +340,13 @@ class MCTSAgent:
         loc = locs[-1] if len(locs) > 0 else "unknown"
         return loc.location, loc.directions, loc.entities
 
-    def available_cmds(self, infos: dict, return_parsed_info: bool=False):
+    def available_cmds(self, infos: dict, 
+                       return_parsed_info: bool=False, verbose=False):
         node = self.current
         admissible = infos['admissible_commands']
         location, directions, loc_ents = self.get_location_and_directions()
         entities = self.get_entities()
-        loc_entities =  set(loc_ents) 
+        loc_entities = set(loc_ents)
 
         admissible = [cmd for cmd in admissible if  # only valid verbs
                       cmd.split()[0] in self.VERBS]
@@ -375,11 +376,13 @@ class MCTSAgent:
         tmp = []
         for cmd in cmdlist:
             words = self.tokenize_from_cmd_template(cmd)
-            ents = [words[1]]
-            ents.extend(words[3:])
             if words[1] in loc_entities and (len(words) < 4 or
                                              words[3] in loc_entities):
                 tmp.append(cmd)
+            else:
+                if verbose:
+                    msg = "Warning, cmd: {} had elements not in locents: {}"
+                    print(msg.format(cmd, loc_entities))
         cmdlist = tmp
 
         # add valid directions
@@ -439,10 +442,10 @@ class MCTSAgent:
         elif verb == 'cook' and "burned the" in obs:
             node.score -= 0.1
 
-    def get_tensor_inputs(self, infos: dict):
+    def get_tensor_inputs(self, infos: dict, verbose=False):
         inputs = dict()
         cmdlist, entities, location, directions = self.available_cmds(
-            infos, return_parsed_info=True)
+            infos, return_parsed_info=True, verbose=verbose)
         inputs['cmdlist'] = cmdlist
         entities = list(entities)
         word2id = {w: i for i, w in enumerate(self.vocab)}
@@ -505,7 +508,7 @@ class MCTSAgent:
             # search until find a new point or ending the game
             subtree_root = self.current
             if self.current.isleaf():
-                inputs = self.get_tensor_inputs(infos)
+                inputs = self.get_tensor_inputs(infos, verbose=verbose)
                 self.expand(inputs)
 
             for st in range(subtrees):
@@ -513,7 +516,7 @@ class MCTSAgent:
                 num_subtree_steps = num_steps
                 while not done and subtree_depth < max_subtree_depth:
                     if self.current.isleaf():
-                        inputs = self.get_tensor_inputs(infos)
+                        inputs = self.get_tensor_inputs(infos, verbose=verbose)
                         self.expand(inputs)
 
                     index, cmd = self.select_move()

@@ -160,7 +160,7 @@ def noun_phrases(texts):
     return noun_phrases
 
 
-# def get_locations_and_directions(self, memory):
+# def get_locations_and_directions(memory):
 #     locs = []
 #     idxs = []
 #     dirs = []

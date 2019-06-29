@@ -110,6 +110,35 @@ else:
 def get_batch(x, i, batch_size):
     return x[(i*batch_size):((i+1)*batch_size)]
 
+VERBS = ["take", "cook", "go", "open", "drop", "slice",
+         "eat", "prepare", "examine", "chop", "dice"]
+ADVERBS = ["with", "from"]
+UNWANTED_WORDS = ['a', 'an', 'the']
+
+
+def get_location_and_directions(feedback_history):
+    locs = [x for x in feedback_history if x.is_valid and x.is_location]
+    loc = locs[-1] if len(locs) > 0 else "unknown"
+    return loc.location, loc.directions, loc.entities
+
+
+def tokenize_from_cmd_template(cmd):
+    words = [x for x in cmd.split() if x not in UNWANTED_WORDS]
+    template = [words[0]]
+    i = 1
+    s = words[1]
+    while i < len(words) - 1:
+        if words[i + 1] not in ADVERBS:
+            s += ' ' + words[i + 1]
+            i += 1
+        else:
+            template.append(s)
+            template.append(words[i + 1])
+            s = words[i + 2]
+            i += 2
+    template.append(s)
+    return template
+
 
 def train(model, optim, data_batch):
     batch_size = len(data_batch)
@@ -120,10 +149,10 @@ def train(model, optim, data_batch):
     counts_batch = [d['counts'] for d in data_batch]
     policy_batch = [np.array(x) / sum(x) for x in counts_batch]
     policy_batch = [0.98 * p + 0.02 / len(p) for p in policy_batch]
+    memory_batch = [d['feedback_history'] for d in data_batch]
 
-    
+
     # nwoutput_batch = [d['nwoutput'] for d in data_batch]  # buggy
-
     value_loss, policy_loss, cmdgen_loss, reg_loss = 0, 0, 0, 0
     with tf.GradientTape() as tape:
         for i in range(batch_size):
@@ -131,10 +160,44 @@ def train(model, optim, data_batch):
             value = value_batch[i]
             policy = policy_batch[i]
             cmds = cmdlist_batch[i]
+            memory = memory_batch[i]
+            loc, dirs, ent_locs = get_location_and_directions(memory)
+            cmd_tokens = [tokenize_from_cmd_template(cmd) for cmd in cmds]
+            ent_locs = set(ent_locs)
 
-            cmdlist_input = tf.constant(x['cmdlist_input'], tf.int32)
+            # fix unseen entities for cmds ========
+            cmdid_in_ents = [
+                i for i, toks in enumerate(cmd_tokens)
+                if toks[1] in ent_locs and (len(toks) < 4 or toks[3] in words)]
+            cmds = [cmds[i] for i in cmdid_in_ents]
+            cmdlist_input = [x['cmdlist_input'][i] for i in cmdid_in_ents]
+
+            if len(cmds) == 0:
+                continue
+
+            ents2id = x['ents2id']
+            cmdprev_input = x['cmdprev_input']
+
+            pad, stend = ents2id['<PAD>'], ents2id['</S>']
+            C, V, K = len(cmds), len(ents2id), nwlogits.shape[0]
+            nwoutput = []
+            cmdents = [[i for i in z if i != pad] for z in ]
+            j = 0
+            for i in range(K - 1):
+                if len(cmdents[i + 1]) > len(cmdents[i]):
+                    j += 1
+                    nwoutput.append(cmdents[i+1][j])
+                else:
+                    j = 0
+                    nwoutput.append(stend)
+            nwoutput.append(stend)
+            unk = ents2id['<UNK>']
+
+            # ====================================
+
+            cmdlist_input = tf.constant(cmdlist_input, tf.int32)
             memory_input = tf.constant(x['memory_input'], tf.int32)
-            cmdprev_input = tf.constant(x['cmdprev_input'], tf.int32)
+            cmdprev_input = tf.constant(cmdprev_input, tf.int32)
             entvocab_input = tf.constant(x['entvocab_input'], tf.int32)
             location_input = tf.constant(x['location_input'], tf.int32)
             # skip round if there's only one command
@@ -156,32 +219,8 @@ def train(model, optim, data_batch):
             phat = tf.math.softmax(plogits)
             logphat = tf.math.log(phat + 1e-12)
             policy_loss += - tf.reduce_sum(logphat * policy)
-            # cmd generation loss
-            # cmdvocab = output['cmdvocab']
-            # nwtoks = output['nextword_tokens']
-            # nwlogits = output['nextword_logits']
-            # for t, l in zip(nwtoks, nwlogits):
-            #     t = tf.one_hot(t, depth=len(cmdvocab))
-            #     p = tf.math.softmax(l, axis=1)
-            #     logp = tf.math.log(p + 1e-12)
-            #     cmdgen_loss += - tf.reduce_sum(logp * t) / len(cmdlist)
-            # find next entities
-            ents2id = x['ents2id']
-            pad, stend = ents2id['<PAD>'], ents2id['</S>']
+
             nwlogits = output['nextword_logits']
-            C, V, K = len(cmds), len(ents2id), nwlogits.shape[0]
-            nwoutput = []
-            cmdents = [[i for i in z if i != pad] for z in x['cmdprev_input']]
-            j = 0
-            for i in range(K - 1):
-                if len(cmdents[i + 1]) > len(cmdents[i]):
-                    j += 1
-                    nwoutput.append(cmdents[i+1][j])
-                else:
-                    j = 0
-                    nwoutput.append(stend)
-            nwoutput.append(stend)
-            # regularization loss
 
             nwp = tf.math.softmax(nwlogits, axis=-1)
             lognwp = tf.math.log(nwp + 1e-12)
@@ -246,8 +285,7 @@ ckpt_every = 90 / batch_size
 # num_epochs = 2 if num_batches < 40 else 1
 
 msg = "OPTIMIZATION: epochs: {} batches: {}  total plays: {}"
-print(msg.format(nu
-m_epochs, num_batches, len(data)))
+print(msg.format(num_epochs, num_batches, len(data)))
 
 iteration = 0
 for e in range(num_epochs):
