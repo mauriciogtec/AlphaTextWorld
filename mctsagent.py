@@ -376,13 +376,13 @@ class MCTSAgent:
         parent = node.parent
         if parent is None or not parent.extra_info['has_examined_cookbook']:
             cmdlist = [cmd for cmd in cmdlist if
-                       cmd.split()[0] in ("examine", "go", "open")]
+                       cmd.split()[0] in ("examine", "go", "open", "take")]
 
         tmp = []
         for cmd in cmdlist:
             words = self.tokenize_from_cmd_template(cmd)
             if words[1] in entities and (len(words) < 4 or
-                                             words[3] in entities):
+                                         words[3] in entities):
                 tmp.append(cmd)
         cmdlist = tmp
 
