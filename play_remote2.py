@@ -74,7 +74,7 @@ cpuct = args.cpuct
 sys.path.append(cwd)
 from custom_layers import *
 from textutils import *
-import attention as nn
+import attention2 as nn
 import mctsagent as mcts
 # ----------------------
 
@@ -112,7 +112,7 @@ network(inputs={
     training=True)
 
 # load latest weights if available
-modeldir = cwd + "trained_models/"
+modeldir = cwd + "trained_models2/"
 models = glob.glob(modeldir + "*.h5")
 if len(models) > 0:
     latest = max(models)
