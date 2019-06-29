@@ -30,6 +30,9 @@ parser = argparse.ArgumentParser(description=description)
 parser.add_argument('--num_games',
                     type=int, default=10,
                     help='Number of games to play.')
+parser.add_argument('--cpuct',
+                    type=float, default=0.4,
+                    help='MCTS Exploration UCT constant')
 parser.add_argument('--subtrees',
                     type=int, default=50,
                     help='Subtrees to spawn.')
@@ -66,6 +69,7 @@ subtree_depth = args.subtree_depth
 output_dir = args.output_dir
 temperature = args.temperature
 verbose = args.verbose
+cpuct = args.cpuct
 
 sys.path.append(cwd)
 from custom_layers import *
@@ -131,7 +135,7 @@ for _ in range(num_games):
 
     agent = mcts.MCTSAgent(
         gamefile, network,
-        cpuct=0.4,
+        cpuct=cpuct,
         dnoise=0.05,
         max_steps=max_steps,
         temperature=temperature)
