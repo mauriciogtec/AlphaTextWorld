@@ -116,7 +116,7 @@ class MCTSAgent:
     including the gaming neural network
     """
     VERBS = ["take", "cook", "go", "open", "drop", "slice",
-             "eat", "prepare", "examine", "chop", "dice"]
+             "eat", "prepare", "examine", "chop", "dice", "drink"]
     ADVERBS = ["with", "from"]
     UNWANTED_WORDS = ['a', 'an', 'the']
 
