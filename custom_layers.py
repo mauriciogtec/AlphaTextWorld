@@ -151,7 +151,7 @@ class MultiHeadAttention(models.Model):
         self.dense = layers.TimeDistributed(
             layers.Dense(
                 units,
-                use_bias=False,
+                use_bias=True,
                 activation="relu",
                 kernel_regularizer=regularizers.l2(l2)))
         # self.dropout = layers.Dropout(dropout)
@@ -268,7 +268,7 @@ class PairedMultiHeadAttention(models.Model):
             self.vs_layers.append(
                 layers.TimeDistributed(
                     layers.Dense(
-                        use_bias=False,
+                        use_bias=True,
                         units=self.units_per_head,
                         kernel_regularizer=regularizers.l2(l2))))
 

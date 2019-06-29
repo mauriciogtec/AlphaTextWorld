@@ -16,10 +16,10 @@ class AlphaTextWorldNet(models.Model):
     """
     Learn to play from memory
     """
-    REG_PENALTY = 1e-5
+    REG_PENALTY = 1e-6
     KSIZE = 3
-    HIDDEN_UNITS = 128
-    ATT_HEADS = 8
+    HIDDEN_UNITS = 64
+    ATT_HEADS = 4
     POSFREQS = 16
     MAX_CMD_LEN = 6
 
@@ -40,7 +40,7 @@ class AlphaTextWorldNet(models.Model):
             input_length=None,
             output_dim=embedding_dim,
             embeddings_initializer=initializers.Constant(embeddings),
-            trainable=True)
+            trainable=False)
 
         self.lfe_memory = LocalFeaturesExtractor(
             filters=self.HIDDEN_UNITS,
@@ -226,7 +226,7 @@ class AlphaTextWorldNet(models.Model):
                 vocabx, prevx, training=training)  # NPC X V X D
             prevx += locx + memvocabx
             prevx = tf.reshape(prevx, (-1, self.HIDDEN_UNITS))
-            prevx = self.cmd_gen_head(prevx, training=training) # (NPC*N) x D
+            prevx = self.cmd_gen_head(prevx, training=training)  # (NPC*N) x D
             nextword_logits = tf.reshape(prevx, (-1, V)) # NPC x V
             
             # nextword_tokens = []

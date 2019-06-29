@@ -11,6 +11,7 @@ import time
 import ujson
 import math
 import os
+import gc
 
 # ----------------------
 description = "Load data and train network"
@@ -62,8 +63,8 @@ tags = nltk.pos_tag(words)
 nouns = [x[0] for x in tags if x[1] == 'NN']
 adjectives = [x[0] for x in tags if x[1] == 'JJ']
 
-embedding_dim = 200
-embedding_fdim = 128
+embedding_dim = 100
+embedding_fdim = 64
 embeddings, vocab = load_embeddings(
     embeddingsdir="/home/mauriciogtec/glove.6B/",
     embedding_dim=embedding_dim,  # try 50
@@ -205,8 +206,8 @@ def train(model, optim, data_batch):
 
 
 # Pull random games from last games
-num_choice = 300
-num_consider = 300
+num_choice = 400
+num_consider = 400
 all_batchfiles = glob.glob("data/*.json")
 all_batchfiles.sort(reverse=True)
 all_batchfiles = all_batchfiles[:num_consider]  # exclude current
@@ -228,16 +229,17 @@ for datafile in all_batchfiles:
 
 # data = data_current
 
-# do this only for one big round
-# data = [x for x in data if
-#         x['value'] > 0.25 or
-#         x['value'] < 0.25]
+# learn from winning losing or nothin
+data = [x for x in data if
+        (x['value'] > 0.5) or
+        (-0.03 < x['value'] < 0.03) or
+        (x['value'] < -0.25)]
 
 # order data and obtain value policy and nextwords
 data = np.random.permutation(data)
 
 ndata = len(data)
-batch_size = int(min(len(data), 8)) if len(data) > 0 else 1
+batch_size = int(min(len(data), 4)) if len(data) > 0 else 1
 num_epochs = 5 # to compare
 num_batches = ndata // batch_size
 ckpt_every = 160 / batch_size
@@ -287,6 +289,8 @@ for e in range(num_epochs):
                            ", cgloss: {:.2f}, rloss: {:.2f}, loss: {:.2f}"])
             print(msg.format(mv, mp, mcg, mr, ml))
             mv, mp, mcg, mr, ml = 0, 0, 0, 0, 0
+
+        gc.collect()
 
 tstamp = math.trunc(100 * time.time())
 wfile = "trained_models2/{}.h5".format(tstamp)
