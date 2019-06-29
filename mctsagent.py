@@ -376,7 +376,7 @@ class MCTSAgent:
             words = self.tokenize_from_cmd_template(cmd)
             ents = [words[1]]
             ents.extend(words[3:])
-            if any([e in entities for e in ents]):
+            if words[1] in entities and words[3] in entities:
                 tmp.append(cmd)
         cmdlist = tmp
 
