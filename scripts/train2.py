@@ -13,6 +13,7 @@ import math
 import os
 import gc
 
+
 # ----------------------
 description = "Load data and train network"
 parser = argparse.ArgumentParser(description=description)
@@ -50,12 +51,44 @@ import mctsagent as mcts
 import nltk
 # ----------------------
 
-path = '/home/mauriciogtec/'
+cwd = "."
+
 textworld_vocab = set()
-with open(path + 'Github/TextWorld/montecarlo/vocab.txt', 'r') as fn:
+with open(cwd + 'textworld_vocab.txt', 'r') as fn:
     for line in fn:
         word = line[:-1]
         textworld_vocab.add(word)
+
+embeddingsdir = cwd + "../glove.6B/"
+embedding_dim = 100
+embedding_fdim = 64
+embeddings, vocab = load_embeddings(
+    embeddingsdir=embeddingsdir,
+    embedding_dim=embedding_dim,  # try 50
+    embedding_fdim=embedding_dim,
+    seed=None,
+    vocab=textworld_vocab)
+
+index = np.random.permutation(range(embedding_dim))[:embedding_fdim]
+embeddings = embeddings[index, :]
+
+# instantiate network
+network = nn.AlphaTextWorldNet(embeddings, vocab)
+network(inputs={
+    'memory_input': tf.constant([[0]], tf.int32),
+    'cmdlist_input': tf.constant([[0]], tf.int32),
+    'location_input': tf.constant([0], tf.int32),
+    'cmdprev_input': tf.constant([[0]], tf.int32),
+    'ents2id': {".": 0},
+    'entvocab_input': tf.constant([[0]], tf.int32)},
+    training=True)
+
+# path = '/home/mauriciogtec/'
+# textworld_vocab = set()
+# with open(path + 'Github/TextWorld/montecarlo/vocab.txt', 'r') as fn:
+#     for line in fn:
+#         word = line[:-1]
+#         textworld_vocab.add(word)
 
 words = [x for x in textworld_vocab if x != "" and not re.search("[^a-z]", x)]
 tags = nltk.pos_tag(words)
@@ -63,16 +96,6 @@ tags = nltk.pos_tag(words)
 nouns = [x[0] for x in tags if x[1] == 'NN']
 adjectives = [x[0] for x in tags if x[1] == 'JJ']
 
-embedding_dim = 100
-embedding_fdim = 64
-embeddings, vocab = load_embeddings(
-    embeddingsdir="/home/mauriciogtec/glove.6B/",
-    embedding_dim=embedding_dim,  # try 50
-    embedding_fdim=embedding_dim,
-    seed=None,
-    vocab=textworld_vocab)
-index = np.random.permutation(range(embedding_dim))[:embedding_fdim]
-embeddings = embeddings[index, :]
 
 # with open("./final_vocab2.txt", "w") as fn:
 #     fn.write("\n".join(vocab))
@@ -117,9 +140,9 @@ UNWANTED_WORDS = ['a', 'an', 'the']
 
 
 def get_location_and_directions(feedback_history):
-    locs = [x for x in feedback_history if x.is_valid and x.is_location]
+    locs = [x for x in feedback_history if x['is_valid'] and x['is_location']]
     loc = locs[-1] if len(locs) > 0 else "unknown"
-    return loc.location, loc.directions, loc.entities
+    return loc['location'], loc['directions'], loc['entities']
 
 
 def tokenize_from_cmd_template(cmd):
@@ -151,7 +174,6 @@ def train(model, optim, data_batch):
     policy_batch = [0.98 * p + 0.02 / len(p) for p in policy_batch]
     memory_batch = [d['feedback_history'] for d in data_batch]
 
-
     # nwoutput_batch = [d['nwoutput'] for d in data_batch]  # buggy
     value_loss, policy_loss, cmdgen_loss, reg_loss = 0, 0, 0, 0
     with tf.GradientTape() as tape:
@@ -170,7 +192,9 @@ def train(model, optim, data_batch):
                 i for i, toks in enumerate(cmd_tokens)
                 if toks[1] in ent_locs and (len(toks) < 4 or toks[3] in words)]
             cmds = [cmds[i] for i in cmdid_in_ents]
-            cmdlist_input = [x['cmdlist_input'][i] for i in cmdid_in_ents]
+            cmdlist_input = x['cmdlist_input']
+            cmdlist_input = [cmdlist_input[i] for i in cmdid_in_ents]
+            policy = [policy[i] for i in cmdid_in_ents]
             if len(cmds) == 0:
                 continue
             ents2id = x['ents2id']
@@ -182,7 +206,7 @@ def train(model, optim, data_batch):
             idx_include = []
             j = 0
             for i in range(K - 1):
-                if unk in cmdents[i]:
+                if unk not in cmdents[i]:
                     if len(cmdents[i + 1]) > len(cmdents[i]):
                         j += 1
                         nwoutput.append(cmdents[i+1][j])
@@ -190,10 +214,13 @@ def train(model, optim, data_batch):
                         j = 0
                         nwoutput.append(stend)
                     idx_include.append(i)
+                else:
+                    j = 0
             if unk not in cmdents[K - 1]:
                 nwoutput.append(stend)
                 idx_include.append(K - 1)
             cmdents = [cmdents[i] for i in idx_include]
+            cmdprev_input = [cmdprev_input[i] for i in idx_include]
             # ====================================
 
             cmdlist_input = tf.constant(cmdlist_input, tf.int32)
@@ -247,8 +274,8 @@ def train(model, optim, data_batch):
 
 
 # Pull random games from last games
-num_choice = 400
-num_consider = 400
+num_choice = 1500
+num_consider = 50
 all_batchfiles = glob.glob("data/*.json")
 all_batchfiles.sort(reverse=True)
 all_batchfiles = all_batchfiles[:num_consider]  # exclude current
@@ -273,17 +300,17 @@ for datafile in all_batchfiles:
 # learn from winning losing or nothin
 data = [x for x in data if
         (x['value'] > 0.5) or
-        (-0.03 < x['value'] < 0.03) or
+        (-0.03 < x['value'] < 0.05) or
         (x['value'] < -0.25)]
 
 # order data and obtain value policy and nextwords
 data = np.random.permutation(data)
 
 ndata = len(data)
-batch_size = int(min(len(data), 3)) if len(data) > 0 else 1
-num_epochs = 5 # to compare
+batch_size = int(min(len(data), 2)) if len(data) > 0 else 1
+num_epochs = 3 # to compare
 num_batches = ndata // batch_size
-ckpt_every = 90 / batch_size
+ckpt_every = 50
 # num_epochs = 2 if num_batches < 40 else 1
 
 msg = "OPTIMIZATION: epochs: {} batches: {}  total plays: {}"
