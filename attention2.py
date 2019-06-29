@@ -45,7 +45,7 @@ class AlphaTextWorldNet(models.Model):
         self.lfe_memory = LocalFeaturesExtractor(
             filters=self.HIDDEN_UNITS,
             kernel_size=self.KSIZE,
-            num_blocks=4,
+            num_blocks=5,
             l2=self.REG_PENALTY)
 
         self.lfe_cmdlist = LocalFeaturesExtractor(

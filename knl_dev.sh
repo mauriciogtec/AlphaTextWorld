@@ -36,6 +36,6 @@ srun -N 1 -n 1 python3 play_remote2.py --temperature 0.4 --subtrees 150 --subtre
 srun -N 1 -n 1 python3 play_remote2.py --temperature 0.4 --subtrees 150 --subtree_depth 10 --max_steps 25 --verbose 0 --min_time 5 --cpuct 0.2 &
 srun -N 1 -n 1 python3 play_remote2.py --temperature 0.4 --subtrees 150 --subtree_depth 10 --max_steps 25 --verbose 0 --min_time 5 --cpuct 0.2 &
 srun -N 1 -n 1 python3 play_remote2.py --temperature 0.4 --subtrees 150 --subtree_depth 10 --max_steps 25 --verbose 0 --min_time 5 --cpuct 0.2 &
-srun -N 1 -n 1 python3 play_remote2.py --temperature 0.4 --subtrees 150 --subtree_depth 10 --max_steps 25 --verbose 0 --min_time
+srun -N 1 -n 1 python3 play_remote2.py --temperature 0.4 --subtrees 150 --subtree_depth 10 --max_steps 25 --verbose 0 --min_time 5 --cpuct 0.2
 
 wait
