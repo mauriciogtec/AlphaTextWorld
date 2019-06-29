@@ -158,7 +158,7 @@ class MCTSAgent:
         self.env = env
         obs, infos = env.reset()
         self.mission = obs[1210:obs.find("=")]
-        self.root.feedback = FeedbackMeta(obs)
+        self.root.feedback = FeedbackMeta(obs[1210:])
         self.max_score = infos['max_score']
 
     def backup_edges(self, value: float, backup_until=None):
