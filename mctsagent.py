@@ -344,14 +344,15 @@ class MCTSAgent:
         node = self.current
         admissible = infos['admissible_commands']
         location, directions, loc_ents = self.get_location_and_directions()
-        entities = set(loc_ents)  # self.get_entities()
+        entities = self.get_entities()
+        loc_entities =  set(loc_ents) 
 
         admissible = [cmd for cmd in admissible if  # only valid verbs
                       cmd.split()[0] in self.VERBS]
 
         if (  # necessary because of bug
                 'examine cookbook' not in admissible and
-                'cookbook' in entities and
+                'cookbook' in loc_entities and
                 any(['cookbook' in cmd for cmd in admissible])):
             admissible.append('examine cookbook')
         
@@ -376,8 +377,8 @@ class MCTSAgent:
             words = self.tokenize_from_cmd_template(cmd)
             ents = [words[1]]
             ents.extend(words[3:])
-            if words[1] in entities and (len(words) < 4 or
-                                         words[3] in entities):
+            if words[1] in loc_entities and (len(words) < 4 or
+                                             words[3] in loc_entities):
                 tmp.append(cmd)
         cmdlist = tmp
 
