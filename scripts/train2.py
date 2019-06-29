@@ -93,15 +93,15 @@ index = np.random.permutation(range(embedding_dim))[:embedding_fdim]
 embeddings = embeddings[index, :]
 
 # instantiate network
-network = nn.AlphaTextWorldNet(embeddings, vocab)
-network(inputs={
-    'memory_input': tf.constant([[0]], tf.int32),
-    'cmdlist_input': tf.constant([[0]], tf.int32),
-    'location_input': tf.constant([0], tf.int32),
-    'cmdprev_input': tf.constant([[0]], tf.int32),
-    'ents2id': {".": 0},
-    'entvocab_input': tf.constant([[0]], tf.int32)},
-    training=True)
+# network = nn.AlphaTextWorldNet(embeddings, vocab)
+# network(inputs={
+#     'memory_input': tf.constant([[0]], tf.int32),
+#     'cmdlist_input': tf.constant([[0]], tf.int32),
+#     'location_input': tf.constant([0], tf.int32),
+#     'cmdprev_input': tf.constant([[0]], tf.int32),
+#     'ents2id': {".": 0},
+#     'entvocab_input': tf.constant([[0]], tf.int32)},
+#     training=True)
 
 # path = '/home/mauriciogtec/'
 # textworld_vocab = set()

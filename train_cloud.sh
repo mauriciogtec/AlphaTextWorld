@@ -1,10 +1,9 @@
 #!/usr/bin/bash
-
 #SBATCH -N 1
 #SBATCH -p skx-normal
 #SBATCH -J train
 #SBATCH -e slurm-%j.err
-#SBATCH -t 0:0:0
+#SBATCH -t 8:0:0
 
 module load intel/17.0.4
 module load python3/
@@ -19,58 +18,58 @@ export OMP_NUM_THREADS=96
 # export openmp=0
 
 set +e
-python3 scripts/train2.py --num_consider 20 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
+python3 scripts/train2.py --num_consider 100 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
-python3 scripts/train2.py --num_consider 20 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
+python3 scripts/train2.py --num_consider 25 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
-python3 scripts/train2.py --num_consider 20 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
+python3 scripts/train2.py --num_consider 25 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
-python3 scripts/train2.py --num_consider 20 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
+python3 scripts/train2.py --num_consider 25 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
-python3 scripts/train2.py --num_consider 20 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
+python3 scripts/train2.py --num_consider 25 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
-python3 scripts/train2.py --num_consider 20 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
+python3 scripts/train2.py --num_consider 25 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
-python3 scripts/train2.py --num_consider 20 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
+python3 scripts/train2.py --num_consider 25 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
-python3 scripts/train2.py --num_consider 20 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
+python3 scripts/train2.py --num_consider 25 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
-python3 scripts/train2.py --num_consider 20 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
+python3 scripts/train2.py --num_consider 25 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
-python3 scripts/train2.py --num_consider 20 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
+python3 scripts/train2.py --num_consider 25 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
-python3 scripts/train2.py --num_consider 20 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
+python3 scripts/train2.py --num_consider 25 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
-python3 scripts/train2.py --num_consider 20 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
+python3 scripts/train2.py --num_consider 25 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
-python3 scripts/train2.py --num_consider 20 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
+python3 scripts/train2.py --num_consider 25 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
-python3 scripts/train2.py --num_consider 20 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
+python3 scripts/train2.py --num_consider 25 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
-python3 scripts/train2.py --num_consider 20 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
+python3 scripts/train2.py --num_consider 25 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
-python3 scripts/train2.py --num_consider 20 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
+python3 scripts/train2.py --num_consider 25 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
-python3 scripts/train2.py --num_consider 20 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
+python3 scripts/train2.py --num_consider 25 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
-python3 scripts/train2.py --num_consider 20 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
+python3 scripts/train2.py --num_consider 25 --batch_size 16 --num_data 100 --ckpt_every 25 --num_epochs 1
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 python3 scripts/train2.py --num_consider 1000 --batch_size 16 --num_data 500 --ckpt_every 25 --num_epochs 2
 set -e

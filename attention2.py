@@ -261,14 +261,14 @@ class AlphaTextWorldNet(models.Model):
         return output
 
 
-def load_network(embeddings, vocab, path_to_weights):
-    model = AlphaTextWorldNet(embeddings, vocab)
-    cmdlist = [".", ".."]
-    memory = ["hi there", "how", "are you holding on"]
-    training = True
-    initrun = model((memory, cmdlist), training=training)
-    model.load_weights(path_to_weights)
-    return model
+# def load_network(embeddings, vocab, path_to_weights):
+#     model = AlphaTextWorldNet(embeddings, vocab)
+#     cmdlist = [".", ".."]
+#     memory = ["hi there", "how", "are you holding on"]
+#     training = True
+#     initrun = model((memory, cmdlist), training=training)
+#     model.load_weights(path_to_weights)
+#     return model
 
 # if __name__ == "__main__":
 
