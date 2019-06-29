@@ -149,7 +149,7 @@ for _ in range(num_games):
         envscore, num_moves, infos, reward = agent.play_episode(
             subtrees=subtrees,
             max_subtree_depth=subtree_depth,
-            verbose=False)
+            verbose=verbose)
         msg = "moves: {:3d}, envscore: {}/{}, reward: {:.2f}"
         # if verbose:
         #     print(msg.format(num_moves, envscore, infos["max_score"], reward))
