@@ -381,13 +381,9 @@ class MCTSAgent:
         tmp = []
         for cmd in cmdlist:
             words = self.tokenize_from_cmd_template(cmd)
-            if words[1] in loc_entities and (len(words) < 4 or
+            if words[1] in entities and (len(words) < 4 or
                                              words[3] in entities):
                 tmp.append(cmd)
-            else:
-                if verbose:
-                    msg = "Warning, cmd: {} had elements not in locents: {}"
-                    print(msg.format(cmd, loc_entities))
         cmdlist = tmp
 
         # add valid directions
