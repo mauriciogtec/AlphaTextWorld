@@ -376,7 +376,7 @@ class MCTSAgent:
         parent = node.parent
         if parent is None or not parent.extra_info['has_examined_cookbook']:
             admissible = [cmd for cmd in admissible if
-                          cmd.split()[0] in ("go", "open")]
+                          cmd.split()[0] in ("examine", "go", "open")]
 
         tmp = []
         for cmd in cmdlist:
