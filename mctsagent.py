@@ -338,13 +338,13 @@ class MCTSAgent:
         memory = self.current.feedback_history()
         locs = [x for x in memory if x.is_valid and x.is_location]
         loc = locs[-1] if len(locs) > 0 else "unknown"
-        return loc.location, loc.directions
+        return loc.location, loc.directions, loc.entities
 
     def available_cmds(self, infos: dict, return_parsed_info: bool=False):
         node = self.current
         admissible = infos['admissible_commands']
-        location, directions = self.get_location_and_directions()
-        entities = self.get_entities()
+        location, directions, loc_ents = self.get_location_and_directions()
+        entities = set(loc_ents)  # self.get_entities()
 
         admissible = [cmd for cmd in admissible if  # only valid verbs
                       cmd.split()[0] in self.VERBS]
