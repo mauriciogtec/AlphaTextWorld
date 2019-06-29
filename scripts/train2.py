@@ -239,14 +239,15 @@ data = [x for x in data if
 data = np.random.permutation(data)
 
 ndata = len(data)
-batch_size = int(min(len(data), 4)) if len(data) > 0 else 1
+batch_size = int(min(len(data), 3)) if len(data) > 0 else 1
 num_epochs = 5 # to compare
 num_batches = ndata // batch_size
-ckpt_every = 160 / batch_size
+ckpt_every = 90 / batch_size
 # num_epochs = 2 if num_batches < 40 else 1
 
 msg = "OPTIMIZATION: epochs: {} batches: {}  total plays: {}"
-print(msg.format(num_epochs, num_batches, len(data)))
+print(msg.format(nu
+m_epochs, num_batches, len(data)))
 
 iteration = 0
 for e in range(num_epochs):
