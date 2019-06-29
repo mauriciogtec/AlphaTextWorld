@@ -83,7 +83,7 @@ network(inputs={
     training=True)
 
 # load latest weights if available
-modeldir = cwd + "trained_models/"
+modeldir = cwd + "trained_models2/"
 models = glob.glob(modeldir + "*.h5")
 if len(models) > 0:
     latest = max(models)
@@ -91,7 +91,7 @@ if len(models) > 0:
 
 
 # rain a few round with 25 to get network started
-gamefiles = glob.glob(cwd + "/games/*.ulx")
+gamefiles = glob.glob(cwd + "../allgames/*.ulx")
 # gamefile = gamefiles[gameindex]
 gamefile = np.random.choice(gamefiles)
 print("Opening game {}".format(gamefile))
