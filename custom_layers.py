@@ -117,7 +117,7 @@ class ScaledDotProductAttention(models.Model):
 
 
 class MultiHeadAttention(models.Model):
-    def __init__(self, units, num_heads, residual=False,
+    def __init__(self, units, num_heads, residual=True,
                  l2=None, dropout=0.1, **kwargs):
         super(MultiHeadAttention, self).__init__(**kwargs)
         self.num_heads = num_heads
@@ -242,7 +242,7 @@ class PairedScaledDotProductAttention(models.Model):
 
 
 class PairedMultiHeadAttention(models.Model):
-    def __init__(self, units, num_heads, residual=False,
+    def __init__(self, units, num_heads, residual=True,
                  l2=None, dropout=0.1, **kwargs):
         super(PairedMultiHeadAttention, self).__init__(**kwargs)
         self.num_heads = num_heads
@@ -340,7 +340,7 @@ class PairedAttentionEncoder(models.Model):
 class DenseHead(models.Model):
     """Trained to predict a singlue value"""
     def __init__(self, hidden_units,
-                 residual=False, dropout=0.25, l2=None, **kwargs):
+                 residual=True, dropout=0.25, l2=None, **kwargs):
         super(DenseHead, self).__init__(**kwargs)
         self.dense_1 = layers.Dense(
             units=hidden_units,

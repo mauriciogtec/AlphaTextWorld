@@ -53,6 +53,14 @@
             "cwd": "/home/mauriciogtec/Github/AlphaTextWorld/"
         },
         {
+            "name": "Train2",
+            "type": "python",
+            "request": "launch",
+            "program": "/home/mauriciogtec/Github/AlphaTextWorld/scripts/train2.py",
+            "console": "integratedTerminal",
+            "cwd": "/home/mauriciogtec/Github/AlphaTextWorld/"
+        },
+        {
             "name": "textutils",
             "type": "python",
             "request": "launch",

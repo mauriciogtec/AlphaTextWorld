@@ -354,6 +354,10 @@ class MCTSAgent:
                 'cookbook' in entities and
                 any(['cookbook' in cmd for cmd in admissible])):
             admissible.append('examine cookbook')
+        
+        admissible = [cmd for cmd in admissible
+                      if cmd.split()[0] != 'examine' or
+                      cmd == 'examine cookbook']  # is the only thing to examine
 
         # if node.extra_info['has_examined_cookbook']:
         #     admissible = [cmd for cmd in admissible

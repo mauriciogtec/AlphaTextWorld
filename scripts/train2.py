@@ -33,7 +33,7 @@ parser = argparse.ArgumentParser(description=description)
 #                                   ', it will play another episode.']))
 parser.add_argument('--cwd', default='./',
                     help='Directory from which to launch')
-parser.add_argument('--model_dir', default='trained_models/',
+parser.add_argument('--model_dir', default='trained_models2/',
                     help='Directory in which to save game results')
 args = parser.parse_args()
 print("Arguments: ", args)
@@ -44,7 +44,7 @@ model_dir = args.model_dir
 sys.path.append(cwd)
 from custom_layers import *
 from textutils import *
-import attention as nn
+import attention2 as nn
 import mctsagent as mcts
 import nltk
 # ----------------------
@@ -62,8 +62,8 @@ tags = nltk.pos_tag(words)
 nouns = [x[0] for x in tags if x[1] == 'NN']
 adjectives = [x[0] for x in tags if x[1] == 'JJ']
 
-embedding_dim = 100
-embedding_fdim = 64
+embedding_dim = 200
+embedding_fdim = 128
 embeddings, vocab = load_embeddings(
     embeddingsdir="/home/mauriciogtec/glove.6B/",
     embedding_dim=embedding_dim,  # try 50
@@ -86,6 +86,7 @@ network(inputs={
     'ents2id': {".": 0},
     'entvocab_input': tf.constant([[0]], tf.int32)},
     training=True)
+print(network.summary())
 
 optim = tf.optimizers.Nadam(
     learning_rate=0.003,
@@ -102,7 +103,7 @@ if len(modelfiles) > 0:
     print("Loading weights:", fn)
     network.load_weights(fn)
 else:
-    network.save_weights('{}trained_models/{}.h5'.format(cwd, tstamp))
+    network.save_weights('{}trained_models2/{}.h5'.format(cwd, tstamp))
 
 
 def get_batch(x, i, batch_size):
@@ -204,8 +205,8 @@ def train(model, optim, data_batch):
 
 
 # Pull random games from last games
-num_choice = 150
-num_consider = 150
+num_choice = 300
+num_consider = 300
 all_batchfiles = glob.glob("data/*.json")
 all_batchfiles.sort(reverse=True)
 all_batchfiles = all_batchfiles[:num_consider]  # exclude current
@@ -228,9 +229,9 @@ for datafile in all_batchfiles:
 # data = data_current
 
 # do this only for one big round
-data = [x for x in data if
-        x['value'] > 0.25 or
-        x['value'] < 0.25]
+# data = [x for x in data if
+#         x['value'] > 0.25 or
+#         x['value'] < 0.25]
 
 # order data and obtain value policy and nextwords
 data = np.random.permutation(data)
@@ -278,7 +279,7 @@ for e in range(num_epochs):
 
         if iteration % ckpt_every == 0:
             tstamp = math.trunc(100 * time.time())
-            wfile = "trained_models/{}.h5".format(tstamp)
+            wfile = "trained_models2/{}.h5".format(tstamp)
             print("saving trained weights to {}...".format(wfile))
             network.save_weights(wfile)
 
@@ -288,7 +289,7 @@ for e in range(num_epochs):
             mv, mp, mcg, mr, ml = 0, 0, 0, 0, 0
 
 tstamp = math.trunc(100 * time.time())
-wfile = "trained_models/{}.h5".format(tstamp)
+wfile = "trained_models2/{}.h5".format(tstamp)
 print("saving trained weights to {}...".format(wfile))
 network.save_weights(wfile)
 
