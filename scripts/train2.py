@@ -165,7 +165,7 @@ def get_entities(feedback_history):
     entities = set(
         ["<PAD>", "<UNK>", "<S>", "</S>"] + VERBS + PREPS)
     for entry in memory:
-        entities.update(entry.entities)
+        entities.update(entry['entities'])
     return entities
 
 
