@@ -57,25 +57,25 @@ class AlphaTextWorldNet(models.Model):
         self.att_memory_loc_time = AttentionEncoder(
             units=self.HIDDEN_UNITS,
             num_heads=self.ATT_HEADS,
-            num_blocks=5,
+            num_blocks=2,
             l2=self.REG_PENALTY)
 
         self.att_memory_loc_turn = PairedAttentionEncoder(
             units=self.HIDDEN_UNITS,
             num_heads=self.ATT_HEADS,
-            num_blocks=5,
+            num_blocks=2,
             l2=self.REG_PENALTY)
 
         self.att_memory_cmdlist_time = AttentionEncoder(
             units=self.HIDDEN_UNITS,
             num_heads=self.ATT_HEADS,
-            num_blocks=5,
+            num_blocks=2,
             l2=self.REG_PENALTY)
 
         self.att_memory_cmdlist_turn = PairedAttentionEncoder(
             units=self.HIDDEN_UNITS,
             num_heads=self.ATT_HEADS,
-            num_blocks=5,
+            num_blocks=2,
             l2=self.REG_PENALTY)
 
         self.value_head = DenseHead(
@@ -93,13 +93,13 @@ class AlphaTextWorldNet(models.Model):
         self.att_cmd_gen_mem = AttentionEncoder(
             units=self.HIDDEN_UNITS,
             num_heads=self.ATT_HEADS,
-            num_blocks=4,
+            num_blocks=2,
             l2=self.REG_PENALTY)
 
         self.att_cmd_gen_prev = AttentionEncoder(
             units=self.HIDDEN_UNITS,
             num_heads=self.ATT_HEADS,
-            num_blocks=5,
+            num_blocks=2,
             l2=self.REG_PENALTY)
 
     def position_encodings(self, depth, freqs):
