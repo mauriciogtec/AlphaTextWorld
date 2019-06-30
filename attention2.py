@@ -157,6 +157,7 @@ class AlphaTextWorldNet(models.Model):
             ents2id = inputs['ents2id']
             entvocab = inputs['entvocab_input']
             cmdprev = inputs['cmdprev_input']
+            lastcmdent = inputs['lastcmdent_input']
 
         # obtain embeddings and self-encode commands amd memory
         memx = self.embeddings(memory)
@@ -222,13 +223,15 @@ class AlphaTextWorldNet(models.Model):
             # cmds_deque = deque(cmdlist)
             # cmd = cmds_deque.popleft()
             # nextword_logits = []
+            currentx = self.embeddings(lastcmdent)
+            currentx = tf.expand_dims(currentx, axis=1)
             prevx = self.att_cmd_gen_prev(
-                vocabx, prevx, training=training)  # NPC X V X D
-            prevx += locx + memvocabx
+                memvocabx, prevx, training=training)  # NPC X V X D
+            context = (prevx + currentx) + locx
             prevx = tf.reshape(prevx, (-1, self.HIDDEN_UNITS))
             prevx = self.cmd_gen_head(prevx, training=training)  # (NPC*N) x D
-            nextword_logits = tf.reshape(prevx, (-1, V)) # NPC x V
-            
+            nextword_logits = tf.reshape(prevx, (-1, V))  # NPC x V
+   
             # nextword_tokens = []
             # while len(cmds_deque) > 0:
             #     cmd_comps = self.split_from_cmd_template(cmd) + ['</S>']

@@ -19,11 +19,11 @@ description = "Load data and train network"
 parser = argparse.ArgumentParser(description=description)
 parser.add_argument('--num_consider',
                     type=int,
-                    default=1000,
+                    default=10,
                     help='Number of games latest games from which to sample')
 parser.add_argument('--num_data',
                     type=int,
-                    default=1000,
+                    default=100,
                     help='Number of data points to sample')
 parser.add_argument('--batch_size',
                     type=int,
@@ -128,6 +128,7 @@ network(inputs={
     'location_input': tf.constant([0], tf.int32),
     'cmdprev_input': tf.constant([[0]], tf.int32),
     'ents2id': {".": 0},
+    'lastcmdent_input': tf.constant([0], tf.int32),
     'entvocab_input': tf.constant([[0]], tf.int32)},
     training=True)
 print(network.summary())
@@ -205,9 +206,11 @@ def train(model, optim, data_batch):
             memory = memory_batch[i]
             loc, dirs, ent_locs = get_location_and_directions(memory)
             cmd_tokens = [tokenize_from_cmd_template(cmd) for cmd in cmds]
-            ent_locs = set(ent_locs)
+            ent_locs = set(ent_locs + dirs)
 
-            # fix unseen entities for cmds ========
+            # fix unseen entities for cmds =====
+            # path to the left
+            # add latest command for sequential prediction
             cmdid_in_ents = [
                 i for i, toks in enumerate(cmd_tokens)
                 if toks[1] in ent_locs and (len(toks) < 4 or toks[3] in words)]
@@ -217,7 +220,16 @@ def train(model, optim, data_batch):
             policy = [policy[i] for i in cmdid_in_ents]
             if len(cmds) == 0:
                 continue
+            # fix entities to have valid directions
             ents2id = x['ents2id']
+            entvocab_input = x['entvocab_input']
+            for d in dirs:
+                if d not in ents2id:
+                    idx = len(ents2id)
+                    ents2id[d] = idx
+                    padlen = len(entvocab_input[0])
+                    entvocab_input.append([idx] + [0] * (padlen - 1))
+            # ========================================
             pad, stend, unk = ents2id['<PAD>'], ents2id['</S>'], ents2id['<UNK>']
             cmdprev_input = x['cmdprev_input']
             C, V, K = len(cmds), len(ents2id), len(cmdprev_input)
@@ -241,14 +253,15 @@ def train(model, optim, data_batch):
                 idx_include.append(K - 1)
             cmdents = [cmdents[i] for i in idx_include]
             cmdprev_input = [cmdprev_input[i] for i in idx_include]
+            lastcmdent_input = [x[-1] for x in cmdents]
             # ====================================
 
             cmdlist_input = tf.constant(cmdlist_input, tf.int32)
             memory_input = tf.constant(x['memory_input'], tf.int32)
             cmdprev_input = tf.constant(cmdprev_input, tf.int32)
-            entvocab_input = tf.constant(x['entvocab_input'], tf.int32)
+            entvocab_input = tf.constant(entvocab_input, tf.int32)
             location_input = tf.constant(x['location_input'], tf.int32)
-
+            lastcmdent_input = tf.constant(lastcmdent_input, tf.int32)
             # skip round if there's only one command
             # if len(cmdlist) < 2:
             #     continue
@@ -259,7 +272,8 @@ def train(model, optim, data_batch):
                       'entvocab_input': entvocab_input,
                       'cmdprev_input': cmdprev_input,
                       'location_input': location_input,
-                      'ents2id': x['ents2id']}
+                      'lastcmdent_input': lastcmdent_input,
+                      'ents2id': ents2id}
             output = model(inputs, training=True)
             # value loss
             vhat = output['value']

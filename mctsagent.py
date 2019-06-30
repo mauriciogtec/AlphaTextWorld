@@ -116,7 +116,7 @@ class MCTSAgent:
     including the gaming neural network
     """
     VERBS = ["take", "cook", "go", "open", "drop", "slice",
-             "eat", "prepare", "examine", "chop", "dice", "drink"]
+             "eat", "prepare", "examine", "chop", "dice"]
     ADVERBS = ["with", "from"]
     UNWANTED_WORDS = ['a', 'an', 'the']
 
@@ -381,8 +381,7 @@ class MCTSAgent:
         tmp = []
         for cmd in cmdlist:
             words = self.tokenize_from_cmd_template(cmd)
-            if words[1] in entities and (len(words) < 4 or
-                                         words[3] in entities):
+            if words[1] in entities and (len(words) < 4 or words[3] in entities):
                 tmp.append(cmd)
         cmdlist = tmp
 
