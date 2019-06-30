@@ -141,8 +141,8 @@ print(network.summary())
 optim = tf.optimizers.Nadam(
     learning_rate=learning_rate,
     clipnorm=45.0,
-    beta_1=0.9,
-    beta_2=0.98)
+    beta_1=0.5,
+    beta_2=0.7)
 
 tstamp = math.trunc(100 * time.time())
 
