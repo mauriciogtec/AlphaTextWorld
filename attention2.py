@@ -167,6 +167,7 @@ class AlphaTextWorldNet(models.Model):
         if training:
             vocabx = self.embeddings(entvocab)
             prevx = self.embeddings(cmdprev)
+            K = prevx.shape[0]
 
         M = memx.shape[0]
         C = cmdx.shape[0]
@@ -180,7 +181,7 @@ class AlphaTextWorldNet(models.Model):
             locx, memx, training=training)  # M x 1 x dim
         memtpx = tf.squeeze(memtpx, axis=1)  # M X dim
         posx = self.position_encodings(M, self.POSFREQS)  # M x pfreq
-        memtpx = tf.concat([memtpx, posx], axis=1)  # M x (dim + posfreq)
+        memtpx = tf.concat([memtpx, posx], axis=-1)  # M x (dim + posfreq)
         memtpx = tf.expand_dims(memtpx, axis=0)  # 1 x M x (dim + posfreq)
         x = self.att_memory_loc_turn(
             locx, memtpx, training=training)  # 1 x (dim)
@@ -190,16 +191,20 @@ class AlphaTextWorldNet(models.Model):
         # 2. pipeline for action value prediction
         x = self.att_memory_cmdlist_time(
             queryx, memx, training=training)  # M x C x dim
+        memx = []  # not used again, free memory
         x = tf.transpose(x, perm=(1, 0, 2))  # C X M X dim
         posx = self.position_encodings(M, self.POSFREQS)  # M x pfreq
         posx = tf.stack([posx] * C, axis=0)  # C x M x posfreq
         x = tf.concat([x, posx], axis=-1)  # C x M x (dim + pfrq)
         x = self.att_memory_cmdlist_turn(
             queryx, x, training=training)  # C x dim
-        contextx = tf.concat([x, locx])  # C x 2D
-        contextx = self.policy_head(contextx, training=training)  # (C)
+        posx = []  # so it gets collected
+        tilelocx = tf.tile(locx, multiples=(C, 1))  # C x D
+        x = tf.concat([x, tilelocx], axis=-1)  # C x 2D
+        tilelocx = []  # free memory
+        x = self.policy_head(x, training=training)  # (C)
         policy_logits = tf.clip_by_value(
-            contextx, clip_value_min=-10, clip_value_max=10)
+            x, clip_value_min=-10, clip_value_max=10)
 
         output = {'value': value, 'policy_logits': policy_logits}
 
@@ -219,18 +224,22 @@ class AlphaTextWorldNet(models.Model):
             memvocabx = tf.squeeze(memvocabx, axis=0)  # V x dim
 
             # -- B. sequential decoding in teacher mode
-            # cmds_deque = deque(cmdlist) 
+            # cmds_deque = deque(cmdlist)
             # cmd = cmds_deque.popleft()
             # nextword_logits = []
-            currentx = self.embeddings(lastcmdent)
-            currentx = tf.expand_dims(currentx, axis=1)
             prevx = self.att_cmd_gen_prev(
-                memvocabx, prevx, training=training)  # NPC X V X D
-            contextx = tf.concat([prevx, currentx, locx])   # NPC X V X 3D
-            x = tf.reshape(contextx, (-1, self.HIDDEN_UNITS))
-            x = self.cmd_gen_head(x, training=training)  # (NPC*N) x D
-            nextword_logits = tf.reshape(x, (-1, V))  # NPC x V
-   
+                memvocabx, prevx, training=training)  # K X V X D
+            tilelocx = tf.tile(locx, multiples=(K, 1))  # K x D
+            currentx = self.embeddings(lastcmdent)  # K x D
+            currentx = tf.concat([currentx, tilelocx], axis=1)  # K x 2D
+            tilelocx = []  # free memory
+            currentx = tf.expand_dims(currentx, axis=1)  # K x 1 x 2D
+            currentx = tf.tile(currentx, multiples=(1, V, 1))  # K x V x 2D
+            currentx = tf.concat([currentx, prevx], axis=-1)  # K X V X 3D
+            x = tf.reshape(currentx, (-1, 3 * self.HIDDEN_UNITS))
+            x = self.cmd_gen_head(x, training=training)  # (K * V) x D
+            nextword_logits = tf.reshape(x, shape=(-1, V))  # K x V
+
             # nextword_tokens = []
             # while len(cmds_deque) > 0:
             #     cmd_comps = self.split_from_cmd_template(cmd) + ['</S>']

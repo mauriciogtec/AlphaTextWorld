@@ -363,8 +363,6 @@ class DenseHead(models.Model):
         x = self.dense_1(x)  # isize x hdim
         # if training:
         #     x = self.dropout(x)
-        if self.residual:
-            x += inputs
         x = self.dense_2(x)  # isize x 1
         x = tf.squeeze(x, axis=1)  # isize
         return x
