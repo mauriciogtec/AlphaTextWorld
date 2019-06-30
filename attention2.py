@@ -197,10 +197,10 @@ class AlphaTextWorldNet(models.Model):
         x = tf.concat([x, posx], axis=-1)  # C x M x (dim + pfrq)
         x = self.att_memory_cmdlist_turn(
             queryx, x, training=training)  # C x dim
-        x += locx  # C x dim
-        x = self.policy_head(x, training=training)  # (C)
+        contextx = x + locx  # C x dim
+        contextx = self.policy_head(contextx, training=training)  # (C)
         policy_logits = tf.clip_by_value(
-            x, clip_value_min=-10, clip_value_max=10)
+            contextx, clip_value_min=-10, clip_value_max=10)
 
         output = {'value': value, 'policy_logits': policy_logits}
 
