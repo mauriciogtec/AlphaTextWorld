@@ -37,6 +37,10 @@ parser.add_argument('--num_epochs',
                     type=int,
                     default=2,
                     help='Epochs in these data.')
+parser.add_argument('--learning_rate',
+                    type=float,
+                    default=0.01,
+                    help='Learning rate')
 # parser.add_argument('--subtree_depth',
 #                     type=int, default=10,
 #                     help='Max depth of search trees.')
@@ -62,6 +66,7 @@ num_data = args.num_data
 ckpt_every = args.ckpt_every
 batch_size = args.batch_size
 num_epochs = args.num_epochs
+learning_rate = args.learning_rate
 
 sys.path.append(cwd)
 from custom_layers import *
@@ -134,7 +139,7 @@ network(inputs={
 print(network.summary())
 
 optim = tf.optimizers.Nadam(
-    learning_rate=0.003,
+    learning_rate=learning_rate,
     clipnorm=45.0,
     beta_1=0.9,
     beta_2=0.98)
