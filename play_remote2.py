@@ -108,6 +108,7 @@ network(inputs={
     'location_input': tf.constant([0], tf.int32),
     'cmdprev_input': tf.constant([[0]], tf.int32),
     'ents2id': {".": 0},
+    'lastcmdent_input': tf.constant([0], tf.int32),
     'entvocab_input': tf.constant([[0]], tf.int32)},
     training=True)
 
