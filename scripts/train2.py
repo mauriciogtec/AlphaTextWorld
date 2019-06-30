@@ -155,9 +155,18 @@ def get_batch(x, i, batch_size):
     return x[(i*batch_size):((i+1)*batch_size)]
 
 VERBS = ["take", "cook", "go", "open", "drop", "slice",
-         "eat", "prepare", "examine", "chop", "dice"]
-ADVERBS = ["with", "from"]
+         "eat", "prepare", "examine", "chop", "dice", "drink"]
+PREPS = ["with", "from"]
 UNWANTED_WORDS = ['a', 'an', 'the']
+
+
+def get_entities(feedback_history):
+    memory = feedback_history
+    entities = set(
+        ["<PAD>", "<UNK>", "<S>", "</S>"] + VERBS + PREPS)
+    for entry in memory:
+        entities.update(entry.entities)
+    return entities
 
 
 def get_location_and_directions(feedback_history):
@@ -207,13 +216,15 @@ def train(model, optim, data_batch):
             loc, dirs, ent_locs = get_location_and_directions(memory)
             cmd_tokens = [tokenize_from_cmd_template(cmd) for cmd in cmds]
             ent_locs = set(ent_locs + dirs)
+            entities = get_entities(memory)
+            entities = set(entities + dirs)
 
             # fix unseen entities for cmds =====
             # path to the left
             # add latest command for sequential prediction
             cmdid_in_ents = [
                 i for i, toks in enumerate(cmd_tokens)
-                if toks[1] in ent_locs and (len(toks) < 4 or toks[3] in words)]
+                if toks[1] in entities and (len(toks) < 4 or toks[3] in entities)]
             cmds = [cmds[i] for i in cmdid_in_ents]
             cmdlist_input = x['cmdlist_input']
             cmdlist_input = [cmdlist_input[i] for i in cmdid_in_ents]
