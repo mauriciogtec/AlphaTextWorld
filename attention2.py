@@ -231,7 +231,7 @@ class AlphaTextWorldNet(models.Model):
             contextx = prevx + currentx   # NPC X V X D
             x = tf.reshape(contextx, (-1, self.HIDDEN_UNITS))
             x = self.cmd_gen_head(x, training=training)  # (NPC*N) x D
-            nextword_logits = tf.reshape(prevx, (-1, V))  # NPC x V
+            nextword_logits = tf.reshape(x, (-1, V))  # NPC x V
    
             # nextword_tokens = []
             # while len(cmds_deque) > 0:
