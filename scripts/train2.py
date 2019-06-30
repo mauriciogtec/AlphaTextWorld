@@ -181,7 +181,7 @@ def tokenize_from_cmd_template(cmd):
     i = 1
     s = words[1]
     while i < len(words) - 1:
-        if words[i + 1] not in ADVERBS:
+        if words[i + 1] not in PREPS:
             s += ' ' + words[i + 1]
             i += 1
         else:
