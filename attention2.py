@@ -213,10 +213,11 @@ class AlphaTextWorldNet(models.Model):
             cmdvocab2id = ents2id
             V = len(cmdvocab2id)
             # vocabx = self.encode_text(cmdvocab)
-            vocabx = tf.math.reduce_sum(vocabx, axis=1)  # V x dim
+            queryx = tf.math.reduce_sum(vocabx, axis=1)  # V x dim
+            queryx += locx
 
             memvocabx = self.att_cmd_gen_mem(
-                vocabx, memtpx, training=training)  # 1 x V x dim
+                queryx, memtpx, training=training)  # 1 x V x dim
             memvocabx = tf.squeeze(memvocabx, axis=0)  # V x dim
 
             # -- B. sequential decoding in teacher mode
@@ -227,9 +228,9 @@ class AlphaTextWorldNet(models.Model):
             currentx = tf.expand_dims(currentx, axis=1)
             prevx = self.att_cmd_gen_prev(
                 memvocabx, prevx, training=training)  # NPC X V X D
-            context = (prevx + currentx) + locx
-            prevx = tf.reshape(prevx, (-1, self.HIDDEN_UNITS))
-            prevx = self.cmd_gen_head(prevx, training=training)  # (NPC*N) x D
+            contextx = prevx + currentx   # NPC X V X D
+            x = tf.reshape(contextx, (-1, self.HIDDEN_UNITS))
+            x = self.cmd_gen_head(x, training=training)  # (NPC*N) x D
             nextword_logits = tf.reshape(prevx, (-1, V))  # NPC x V
    
             # nextword_tokens = []
