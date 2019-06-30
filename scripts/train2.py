@@ -217,7 +217,7 @@ def train(model, optim, data_batch):
             cmd_tokens = [tokenize_from_cmd_template(cmd) for cmd in cmds]
             ent_locs = set(ent_locs + dirs)
             entities = get_entities(memory)
-            entities = set(entities + dirs)
+            entities.update(dirs)
 
             # fix unseen entities for cmds =====
             # path to the left
