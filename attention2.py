@@ -184,7 +184,6 @@ class AlphaTextWorldNet(models.Model):
         memtpx = tf.expand_dims(memtpx, axis=0)  # 1 x M x (dim + posfreq)
         x = self.att_memory_loc_turn(
             locx, memtpx, training=training)  # 1 x (dim)
-        x += locx  # 1 x dim
         value = self.value_head(x, training=training)  # 1
         value = tf.squeeze(value)  # ()
 
@@ -197,7 +196,7 @@ class AlphaTextWorldNet(models.Model):
         x = tf.concat([x, posx], axis=-1)  # C x M x (dim + pfrq)
         x = self.att_memory_cmdlist_turn(
             queryx, x, training=training)  # C x dim
-        contextx = x + locx  # C x dim
+        contextx = tf.concat([x, locx])  # C x 2D
         contextx = self.policy_head(contextx, training=training)  # (C)
         policy_logits = tf.clip_by_value(
             contextx, clip_value_min=-10, clip_value_max=10)
@@ -214,21 +213,20 @@ class AlphaTextWorldNet(models.Model):
             V = len(cmdvocab2id)
             # vocabx = self.encode_text(cmdvocab)
             queryx = tf.math.reduce_sum(vocabx, axis=1)  # V x dim
-            queryx += locx
 
             memvocabx = self.att_cmd_gen_mem(
                 queryx, memtpx, training=training)  # 1 x V x dim
             memvocabx = tf.squeeze(memvocabx, axis=0)  # V x dim
 
             # -- B. sequential decoding in teacher mode
-            # cmds_deque = deque(cmdlist)
+            # cmds_deque = deque(cmdlist) 
             # cmd = cmds_deque.popleft()
             # nextword_logits = []
             currentx = self.embeddings(lastcmdent)
             currentx = tf.expand_dims(currentx, axis=1)
             prevx = self.att_cmd_gen_prev(
                 memvocabx, prevx, training=training)  # NPC X V X D
-            contextx = prevx + currentx   # NPC X V X D
+            contextx = tf.concat([prevx, currentx, locx])   # NPC X V X 3D
             x = tf.reshape(contextx, (-1, self.HIDDEN_UNITS))
             x = self.cmd_gen_head(x, training=training)  # (NPC*N) x D
             nextword_logits = tf.reshape(x, (-1, V))  # NPC x V
