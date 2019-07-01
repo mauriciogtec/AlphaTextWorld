@@ -19,11 +19,11 @@ description = "Load data and train network"
 parser = argparse.ArgumentParser(description=description)
 parser.add_argument('--num_consider',
                     type=int,
-                    default=10,
+                    default=1000,
                     help='Number of games latest games from which to sample')
 parser.add_argument('--num_data',
                     type=int,
-                    default=100,
+                    default=2000,
                     help='Number of data points to sample')
 parser.add_argument('--batch_size',
                     type=int,
@@ -31,7 +31,7 @@ parser.add_argument('--batch_size',
                     help='Batch size')
 parser.add_argument('--ckpt_every',
                     type=int,
-                    default=50,
+                    default=25,
                     help='How many batches often print and save results')
 parser.add_argument('--num_epochs',
                     type=int,
