@@ -279,7 +279,7 @@ class MCTSAgent:
         env.close()
 
     def step(self, index: int, cmd: str):
-        """This one should be called instead of env.reset"""
+        """This one should be called instead of env.step"""
         node = self.current
         node_score = node.score
         node_envscore = node.envscore
