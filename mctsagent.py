@@ -1,5 +1,5 @@
-# Assumes python 3.7
-# Assumes a pretrained neural network model saved as keras model
+# python 3.7
+
 
 import numpy as np
 import tensorflow as tf
