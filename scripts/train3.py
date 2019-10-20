@@ -39,16 +39,6 @@ parser.add_argument('--num_epochs',
                     type=int,
                     default=2,
                     help='Epochs in these data.')
-# parser.add_argument('--subtree_depth',
-#                     type=int, default=10,
-#                     help='Max depth of search trees.')
-# parser.add_argument('--max_steps',
-#                     type=int, default=25,
-#                     help='Max number of steps per game. Defaults to 100.')
-# parser.add_argument('--min_time',
-#                     type=float, default=60,
-#                     help=''.join(['Min time playing. If a game ends sooner',
-#                                   ', it will play another episode.']))
 parser.add_argument('--cwd', default='./',
                     help='Directory from which to launch')
 parser.add_argument('--model_dir', default='trained_models2/',
@@ -93,24 +83,6 @@ embeddings, vocab = load_embeddings(
 
 index = np.random.permutation(range(embedding_dim))[:embedding_fdim]
 embeddings = embeddings[index, :]
-
-# instantiate network
-# network = nn.AlphaTextWorldNet(embeddings, vocab)
-# network(inputs={
-#     'memory_input': tf.constant([[0]], tf.int32),
-#     'cmdlist_input': tf.constant([[0]], tf.int32),
-#     'location_input': tf.constant([0], tf.int32),
-#     'cmdprev_input': tf.constant([[0]], tf.int32),
-#     'ents2id': {".": 0},
-#     'entvocab_input': tf.constant([[0]], tf.int32)},
-#     training=True)
-
-# path = '/home/mauriciogtec/'
-# textworld_vocab = set()
-# with open(path + 'Github/TextWorld/montecarlo/vocab.txt', 'r') as fn:
-#     for line in fn:
-#         word = line[:-1]
-#         textworld_vocab.add(word)
 
 words = [x for x in textworld_vocab if x != "" and not re.search("[^a-z]", x)]
 tags = nltk.pos_tag(words)
@@ -252,9 +224,6 @@ def train(model, optim, data_batch):
             location_input = tf.constant(x['location_input'], tf.int32)
 
             # skip round if there's only one command
-            # if len(cmdlist) < 2:
-            #     continue
-            # evaluate model
             C, V, K = len(cmds), len(ents2id), len(cmdprev_input)
             inputs = {'memory_input': memory_input,
                       'cmdlist_input': cmdlist_input,
@@ -297,17 +266,9 @@ def train(model, optim, data_batch):
 
 
 # Pull random games from last games
-# num_choice = 1500
-# num_consider = num_choice  # 10
 all_batchfiles = glob.glob("data/*.json")
 all_batchfiles.sort(reverse=True)
 all_batchfiles = all_batchfiles[:num_consider]  # exclude current
-
-# if len(all_batchfiles) > num_choice:
-#     datatstamps = np.random.choice(
-#         all_batchfiles,
-#         size=num_choice,
-#         replace=False)
 
 # extend current data
 data = []
@@ -332,11 +293,7 @@ data_idx = np.random.choice(np.arange(len(data)), num_data)
 data = [data[i] for i in data_idx]
 
 ndata = len(data)
-# batch_size = int(min(len(data), 2)) if len(data) > 0 else 1
-# num_epochs = 2 # to compare
 num_batches = ndata // batch_size
-# ckpt_every = 50
-# num_epochs = 2 if num_batches < 40 else 1
 
 msg = "OPTIMIZATION: epochs: {} batches: {}  total plays: {}"
 print(msg.format(num_epochs, num_batches, len(data)))
