@@ -1,4 +1,4 @@
-# MCTS + DL -> TextWorld
+# MCTS + DL for TextWorld
 
 This project implements an artificial agent for cometing at the TextWorld challenge ([aka.ms/textworld](aka.ms/textworld))
 
